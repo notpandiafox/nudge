@@ -13,39 +13,36 @@ The solver engine that powers the hints for Wordle. It will use knuth's 5 guess 
 ## Performance target
 - There are no latency requirements but just make sure it is as fast as possible while stil giving the most optimal answers
 
-## Must have / Nice to have / Not doing
-- Same three-bucket format as before, but scoped to the solver only
-  (e.g. "must have: handles duplicate letters correctly in feedback",
-  "not doing: hard-mode-specific hint variants")
-- must have
-  - Given the current set of possible answers, the solver picks the
+## Must have
+- Given the current set of possible answers, the solver picks the
   guess that minimizes the size of the largest feedback-group it
   could produce (Knuth's minimax criterion) — not average-case,
   not entropy.
-  - The solver searches over the full valid-guess list (~13,000 words),
+- The solver searches over the full valid-guess list (~13,000 words),
   not just the shrinking list of possible answers — a guess doesn't
   have to be a candidate answer to be evaluated.
-  - The feedback function correctly implements Wordle's actual rules,
+- The feedback function correctly implements Wordle's actual rules,
   including duplicate-letter cases (e.g. guessing "SPEED" against
   answer "ERASE" must produce the same pattern the real game would).
-  - When multiple guesses tie on worst-case bucket size, the solver
+- When multiple guesses tie on worst-case bucket size, the solver
   prefers one that is still a valid possible answer (so a lucky guess
   can win immediately), per Knuth's original tie-break rule.
-  - Given a full game (a real answer and repeated solver-vs-itself play),
+- Given a full game (a real answer and repeated solver-vs-itself play),
   the solver always converges to the correct word within Wordle's
   6-guess limit, for every word in the answer list — no unsolvable
   cases.
-  - The feedback function and the minimax scoring function are each
+- The feedback function and the minimax scoring function are each
   independently unit-tested against known/hand-verified examples,
   not just tested end-to-end.
-  - The solver's output is deterministic — the same board state always
+- The solver's output is deterministic — the same board state always
   produces the same suggested guess.
-  - The user can pick which strategy (minimax or entropy) powers their
+- The user can pick which strategy (minimax or entropy) powers their
   hints, so minimax is not the only user-facing engine. How the picker
   works is a UI question, tracked in the top-level intent.
 
-- nice to have a precomputed first move since the first move and make sure to cache the first guess's full result
-- nice to have the knuth's algorithm to be compared against the entropy algorithm
+## Nice to have
+- A precomputed first move, caching the first guess's full result
+- Knuth's algorithm compared against the entropy algorithm
 
 ## Open questions
 - Full tie-break rule: "prefer a valid candidate answer" is defined,
