@@ -249,7 +249,7 @@ ctest --test-dir build -L slow --output-on-failure
 cmake -S . -B build-cov -G Ninja -DCMAKE_BUILD_TYPE=Debug -DNUDGE_COVERAGE=ON
 cmake --build build-cov
 ctest --test-dir build-cov -L fast
-gcovr -r . --object-directory build-cov --filter solver/src/ --filter solver/include/ --fail-under-line 100 --fail-under-function 100 --exclude-throw-branches --exclude-unreachable-branches --txt --delete
+gcovr -r . --object-directory build-cov --filter solver/src/ --filter solver/include/ --fail-under-line 100 --fail-under-function 100 --exclude-throw-branches --exclude-unreachable-branches --exclude-noncode-lines --txt --delete
 
 # Python script tests with coverage
 pytest scripts/tests --cov=scripts --cov-config=scripts/.coveragerc --cov-fail-under=100
@@ -281,24 +281,25 @@ for WebAssembly, which isn't wanted and would likely fail.
 
 ### 5.1 Words and letters
 
-- **Guess-list words are indices.** At build time the guess list is sorted
-  alphabetically and each word's index (0–14,854) is its position. Inside the
-  scoring loop, a word is that index, stored as a `uint16_t`.
-- **Each guess-list word also has precomputed data:**
-  - its five letters as numbers 0–25 (`a` = 0),
-  - a **letter mask**: a 26-bit number with one bit set for each letter
-    that appears in it.
-- **Answer-list words are guess-list indices too.** The spec guarantees every
-  answer is in the guess list, so candidates are always guess-list indices,
-  whether or not fallback mode is on. One representation for both.
-- **Candidate membership** (needed by tie-break rule 1) is a per-turn array of
-  14,855 true/false values built from the current candidate list.
+*As built (T2–T5); this replaced an earlier design that stored words as
+16-bit positions in the guess list. Nothing turned out to need the positions,
+and every user converted them back to words.*
 
-*Why indices:* comparing two numbers is far cheaper than comparing two
-strings, and the scoring loop runs millions of times per hint.
+- **A word is a `Word`:** its five letters as numbers 0–25 (`a` = 0), 5 bytes.
+  `Word::parse` is the only way to make one (§5.3).
+- **Both lists are sorted vectors of `Word`s,** and so are the candidates,
+  whether they come from the answer list or, in fallback mode, the guess list.
+  `bucketize` reads them directly.
+- **Candidate membership** (tie-break rule 1, T6) is a binary search in the
+  sorted candidates.
+- **A letter mask** (a 26-bit number with one bit per letter in the word)
+  arrives in T6 with tie-break rule 2, its first user.
 
-*Why sorted:* tie-break rule 3 ("alphabetical") becomes "lowest index", with
-no string comparison.
+*Why `Word`s and not strings:* comparing 5 small numbers is far cheaper than
+comparing strings, and the scoring loop runs millions of times per hint.
+
+*Why sorted:* tie-break rule 3 ("alphabetical") becomes comparing two `Word`s,
+and membership becomes a binary search.
 
 *Why the letter mask:* tie-break rule 2 ("most distinct untested letters")
 becomes `std::popcount(guessMask & ~testedMask)`.
@@ -885,8 +886,9 @@ rarely produce.
   the guess list). A CRLF input file comes out LF.
 - Done in T3, beyond the list above: `word.hpp` moved to the public headers,
   since `WordLists` hands out `Word`s; `fromWords` also rejects an empty
-  answer list and more guesses than a 16-bit index can hold; the import
-  script creates `data/` if it's missing (found by the first real run).
+  answer list; the import script creates `data/` if it's missing (found by
+  the first real run). (T3 also stored answers as 16-bit positions with a
+  65,536-guess limit; T5's review removed both, see §5.1.)
 
 ### T4. Speed and WebAssembly spike
 
@@ -935,6 +937,25 @@ gets the Emscripten install, the riskiest setup step, done early.
 *Why fallback and impossible state are here, not later:* draft 1 added them in
 T10, which meant rewriting `addFeedbackPattern` after it was written. With
 `derive`, they're part of the same small function from the start.
+
+**Done in T5, and how it differs from the list above:**
+- `derive` computes only what T5 uses: solved, fallback and the candidates.
+  Tested letters arrive in T6 and the hard-mode pool in T10, each with its
+  first user. The hard-mode flag isn't stored yet either (Clang rejects a
+  stored field nothing reads); the constructor keeps the spec's parameter.
+- Candidates are `Word`s, not guess-list positions: `bucketize` reads them
+  directly, and a winning word in neither list has no position. Following
+  T5's review, `WordLists::answers()` also returns `Word`s now; the 16-bit
+  `Index`, its 65,536-guess limit and its test are gone (§5.1).
+- `WordleSolver` copies its `WordLists` (passed by value), so a temporary list
+  can't leave it with a dangling reference.
+- "The same word twice with the same pattern changes nothing" means the
+  candidates don't change. The veteran words show both rows, like the board.
+- The coverage gate now uses gcovr's `--exclude-noncode-lines`. GCC puts the
+  exception clean-up of a function returning a `std::string` or `std::vector`
+  on its closing `}`, which no test can run. The option drops exactly those
+  lines (190 counted lines became 188), and the gate was rechecked to still
+  fail on a really untested function.
 
 ### T6. Ranking and tie-break
 

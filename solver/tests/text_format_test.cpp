@@ -2,7 +2,7 @@
 
 #include <gtest/gtest.h>
 
-#include "tile_printer.hpp"
+#include "test_printers.hpp"
 
 namespace nudge {
 namespace {

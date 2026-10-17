@@ -20,4 +20,12 @@ std::optional<Word> Word::parse(std::string_view text) {
     return word;
 }
 
+std::string Word::text() const {
+    std::string text(5, ' ');
+    for (std::size_t i = 0; i < 5; ++i) {
+        text[i] = static_cast<char>('a' + letters_[i]);
+    }
+    return text;
+}
+
 }  // namespace nudge

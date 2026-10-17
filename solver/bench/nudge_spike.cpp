@@ -9,7 +9,6 @@
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
-#include <string>
 #include <string_view>
 
 #include "worst_cases.hpp"
@@ -17,14 +16,6 @@
 namespace {
 
 using nudge::Word;
-
-std::string text(const Word& word) {
-    std::string out;
-    for (const auto letter : word.letters()) {
-        out += static_cast<char>('a' + letter);
-    }
-    return out;
-}
 
 // One hint: bucket counts for every guess in the pool against the candidates.
 double timeHint(const nudge::WordLists& lists, const std::vector<Word>& candidates,
@@ -45,7 +36,7 @@ void report(const char* name, const nudge::WordLists& lists, const nudge::WorstC
         best = std::min(best, timeHint(lists, worst.candidates, checksum));
     }
     std::printf("%s: %s %d, %zu candidates, best of 5: %.1f ms (checksum %llu)\n", name,
-                text(worst.opener).c_str(), worst.pattern, worst.candidates.size(), best,
+                worst.opener.text().c_str(), worst.pattern, worst.candidates.size(), best,
                 static_cast<unsigned long long>(checksum));
 }
 
@@ -61,7 +52,7 @@ int main(int argc, char** argv) {
             return 1;
         }
         // Filtering first, like the solver does before scoring; then one hint, timed once.
-        const auto words = list == "answers" ? nudge::answerWords(lists) : lists.guesses();
+        const auto& words = list == "answers" ? lists.answers() : lists.guesses();
         const auto pattern = static_cast<nudge::PatternCode>(std::atoi(argv[2]));
         const auto candidates = nudge::wordsGiving(*opener, pattern, words);
         std::uint64_t checksum = 0;

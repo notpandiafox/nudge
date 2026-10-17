@@ -134,7 +134,7 @@ jobs:
           gcovr -r . --object-directory build-cov
           --filter solver/src/ --filter solver/include/
           --fail-under-line 100 --fail-under-function 100
-          --exclude-throw-branches --exclude-unreachable-branches
+          --exclude-throw-branches --exclude-unreachable-branches --exclude-noncode-lines
           --txt --html-details coverage/index.html
       - name: Upload coverage report
         if: always()

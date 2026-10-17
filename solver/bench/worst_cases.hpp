@@ -15,14 +15,6 @@ struct WorstCase {
     std::vector<Word> candidates;
 };
 
-inline std::vector<Word> answerWords(const WordLists& lists) {
-    std::vector<Word> words;
-    for (const WordLists::Index i : lists.answers()) {
-        words.push_back(lists.guesses()[i]);
-    }
-    return words;
-}
-
 inline std::vector<Word> wordsGiving(const Word& opener, PatternCode pattern,
                                      const std::vector<Word>& words) {
     std::vector<Word> result;
@@ -37,7 +29,7 @@ inline std::vector<Word> wordsGiving(const Word& opener, PatternCode pattern,
 // The slowest possible second turn: the first guess and colors that leave the
 // most answers still possible (plan §5.9). Ties go to the earliest guess.
 inline WorstCase worstOpener(const WordLists& lists) {
-    const std::vector<Word> answers = answerWords(lists);
+    const std::vector<Word>& answers = lists.answers();
     WorstCase worst{lists.guesses().front(), 0, {}};
     std::uint32_t largest = 0;
     for (const Word& opener : lists.guesses()) {
@@ -57,7 +49,7 @@ inline WorstCase worstOpener(const WordLists& lists) {
 // The slowest early fallback: the first guess and colors that rule out every
 // answer but leave the most guess-list words. Ties go to the earliest guess.
 inline WorstCase worstFallback(const WordLists& lists) {
-    const std::vector<Word> answers = answerWords(lists);
+    const std::vector<Word>& answers = lists.answers();
     WorstCase worst{lists.guesses().front(), 0, {}};
     std::uint32_t largest = 0;
     for (const Word& opener : lists.guesses()) {

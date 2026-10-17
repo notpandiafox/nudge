@@ -1,7 +1,6 @@
 #include "nudge/word_lists.hpp"
 
 #include <algorithm>
-#include <limits>
 #include <stdexcept>
 
 namespace nudge {
@@ -55,21 +54,14 @@ const WordLists& WordLists::builtin() {
 std::optional<WordLists> WordLists::fromWords(const std::vector<std::string_view>& answers,
                                               const std::vector<std::string_view>& guesses) {
     auto guessWords = sortedUniqueWords(guesses);
-    const auto answerWords = sortedUniqueWords(answers);
+    auto answerWords = sortedUniqueWords(answers);
+    // Both lists are sorted with no repeats, so includes() checks every answer is a guess.
     if (!guessWords || !answerWords || answerWords->empty() ||
-        guessWords->size() > std::size_t{std::numeric_limits<Index>::max()} + 1) {
+        !std::includes(guessWords->begin(), guessWords->end(), answerWords->begin(),
+                       answerWords->end())) {
         return std::nullopt;
     }
-    std::vector<Index> answerIndices;
-    answerIndices.reserve(answerWords->size());
-    for (const Word& answer : *answerWords) {
-        const auto found = std::lower_bound(guessWords->begin(), guessWords->end(), answer);
-        if (found == guessWords->end() || *found != answer) {
-            return std::nullopt;
-        }
-        answerIndices.push_back(static_cast<Index>(found - guessWords->begin()));
-    }
-    return WordLists(std::move(*guessWords), std::move(answerIndices));
+    return WordLists(std::move(*guessWords), std::move(*answerWords));
 }
 
 }  // namespace nudge

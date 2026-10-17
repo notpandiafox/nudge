@@ -8,6 +8,7 @@ add_executable(nudge_fast_tests
     word_lists_test.cpp
     worst_cases_test.cpp
     word_test.cpp
+    wordle_solver_test.cpp
 )
 # Tests also check internal pieces (src/), benchmark helpers (bench/) and use
 # the reference checkers (tests/).

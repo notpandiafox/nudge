@@ -14,6 +14,8 @@ TEST(WordParse, AnyCaseBecomesTheSameLowercaseWord) {
     EXPECT_EQ(Word::parse("Crane"), lower);
 }
 
+TEST(WordText, IsTheWordInLowercase) { EXPECT_EQ(Word::parse("CRane")->text(), "crane"); }
+
 TEST(WordParse, LettersAreNumberedFromA) {
     const auto word = Word::parse("azbyc");
     ASSERT_TRUE(word.has_value());

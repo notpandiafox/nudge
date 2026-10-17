@@ -4,6 +4,7 @@ add_library(nudge_solver
     src/text_format.cpp
     src/word.cpp
     src/word_lists.cpp
+    src/wordle_solver.cpp
 )
 # include/ is the spec's public interface; src/ holds internal headers.
 target_include_directories(nudge_solver PUBLIC include PRIVATE src ${PROJECT_SOURCE_DIR}/data)

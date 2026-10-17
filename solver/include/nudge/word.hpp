@@ -4,6 +4,7 @@
 #include <compare>
 #include <cstdint>
 #include <optional>
+#include <string>
 #include <string_view>
 
 namespace nudge {
@@ -17,6 +18,9 @@ public:
     static std::optional<Word> parse(std::string_view text);
 
     const std::array<std::uint8_t, 5>& letters() const { return letters_; }
+
+    // The word in lowercase, e.g. "crane".
+    std::string text() const;
 
     // Compares letter by letter, so sorting Words sorts them alphabetically.
     auto operator<=>(const Word&) const = default;

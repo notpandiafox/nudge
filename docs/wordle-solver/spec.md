@@ -216,21 +216,20 @@ public:
 // Answer list, guess list, and the stored first guess for each strategy.
 class WordLists {
 public:
-    using Index = std::uint16_t;                 // a word's position in guesses()
     static const WordLists& builtin();           // the compiled-in lists
     // For tests: sorts and checks the words; no stored first guesses. Nothing if
     // a word isn't 5 letters, a list repeats a word, an answer isn't a guess,
-    // there are no answers, or there are more than 65,536 guesses.
+    // or there are no answers.
     static std::optional<WordLists> fromWords(const std::vector<std::string_view>& answers,
                                               const std::vector<std::string_view>& guesses);
     const std::vector<Word>& guesses() const;    // sorted alphabetically
-    const std::vector<Index>& answers() const;   // sorted positions in guesses()
+    const std::vector<Word>& answers() const;    // sorted alphabetically; all also guesses
 };
 
 class WordleSolver {
 public:
     WordleSolver(std::unique_ptr<ScoringStrategy> strategy, bool hardMode,
-                 const WordLists& lists = WordLists::builtin());
+                 WordLists lists = WordLists::builtin());  // copied
 
     Status addFeedbackPattern(const std::string& word, const FeedbackPattern& pattern);
     std::string getBestGuess() const;

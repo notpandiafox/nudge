@@ -10,7 +10,7 @@
 #include "nudge/text_format.hpp"
 #include "nudge/word.hpp"
 #include "reference/simple_feedback.hpp"
-#include "tile_printer.hpp"
+#include "test_printers.hpp"
 
 namespace nudge {
 namespace {

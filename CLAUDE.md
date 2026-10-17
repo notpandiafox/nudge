@@ -33,7 +33,7 @@ ctest --test-dir build -L slow --output-on-failure
 cmake -S . -B build-cov -G Ninja -DCMAKE_BUILD_TYPE=Debug -DNUDGE_COVERAGE=ON
 cmake --build build-cov
 ctest --test-dir build-cov -L fast
-gcovr -r . --object-directory build-cov --filter solver/src/ --filter solver/include/ --fail-under-line 100 --fail-under-function 100 --exclude-throw-branches --exclude-unreachable-branches --txt --delete
+gcovr -r . --object-directory build-cov --filter solver/src/ --filter solver/include/ --fail-under-line 100 --fail-under-function 100 --exclude-throw-branches --exclude-unreachable-branches --exclude-noncode-lines --txt --delete
 
 # Formatting (needs: pip install clang-format==23.1.3)
 git ls-files -co --exclude-standard 'solver/*.cpp' 'solver/*.hpp' | xargs clang-format --dry-run --Werror
