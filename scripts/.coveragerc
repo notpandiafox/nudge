@@ -1,0 +1,9 @@
+# Coverage for the Python scripts (plan §8.6): measure the scripts, not their
+# tests, and don't count the "run as a program" line.
+[run]
+omit =
+    scripts/tests/*
+
+[report]
+exclude_also =
+    if __name__ == .__main__.:

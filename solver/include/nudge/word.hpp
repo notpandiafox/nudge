@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <compare>
 #include <cstdint>
 #include <optional>
 #include <string_view>
@@ -17,7 +18,8 @@ public:
 
     const std::array<std::uint8_t, 5>& letters() const { return letters_; }
 
-    bool operator==(const Word&) const = default;
+    // Compares letter by letter, so sorting Words sorts them alphabetically.
+    auto operator<=>(const Word&) const = default;
 
 private:
     Word() = default;

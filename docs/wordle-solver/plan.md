@@ -855,6 +855,10 @@ rarely produce.
 - pytest tests at 100%: valid lists, uppercase input lowercased, and each check
   failing on bad input (a 6-letter word, a duplicate, an answer missing from
   the guess list). A CRLF input file comes out LF.
+- Done in T3, beyond the list above: `word.hpp` moved to the public headers,
+  since `WordLists` hands out `Word`s; `fromWords` also rejects an empty
+  answer list and more guesses than a 16-bit index can hold; the import
+  script creates `data/` if it's missing (found by the first real run).
 
 ### T4. Speed and WebAssembly spike
 

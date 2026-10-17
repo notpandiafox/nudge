@@ -4,6 +4,7 @@ include(GoogleTest)
 add_executable(nudge_fast_tests
     feedback_test.cpp
     text_format_test.cpp
+    word_lists_test.cpp
     word_test.cpp
 )
 # Tests also check internal pieces (src/) and use the reference checkers (tests/).

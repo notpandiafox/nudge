@@ -2,9 +2,10 @@ add_library(nudge_solver
     src/feedback.cpp
     src/text_format.cpp
     src/word.cpp
+    src/word_lists.cpp
 )
 # include/ is the spec's public interface; src/ holds internal headers.
-target_include_directories(nudge_solver PUBLIC include PRIVATE src)
+target_include_directories(nudge_solver PUBLIC include PRIVATE src ${PROJECT_SOURCE_DIR}/data)
 
 # Options for every nudge target. -ffp-contract=off stops the compiler from
 # fusing multiply-and-add differently on different machines, so native and

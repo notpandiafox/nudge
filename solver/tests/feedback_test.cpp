@@ -8,9 +8,9 @@
 
 #include "feedback_code.hpp"
 #include "nudge/text_format.hpp"
+#include "nudge/word.hpp"
 #include "reference/simple_feedback.hpp"
 #include "tile_printer.hpp"
-#include "word.hpp"
 
 namespace nudge {
 namespace {

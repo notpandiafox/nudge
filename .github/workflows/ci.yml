@@ -75,6 +75,20 @@ jobs:
       - name: clang-tidy
         run: clang-tidy-18 -p build $(git ls-files 'solver/src/*.cpp')
 
+  python:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Install tools
+        run: pip install pytest==9.1.1 pytest-cov==7.1.0
+      - name: Script tests (100% coverage)
+        run: >
+          pytest scripts/tests --cov=scripts --cov-config=scripts/.coveragerc
+          --cov-report=term-missing --cov-fail-under=100
+
   coverage:
     runs-on: ubuntu-24.04
     steps:

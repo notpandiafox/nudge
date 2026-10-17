@@ -1,4 +1,4 @@
-#include "word.hpp"
+#include "nudge/word.hpp"
 
 namespace nudge {
 

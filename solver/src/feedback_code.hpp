@@ -4,7 +4,7 @@
 #include <cstdint>
 
 #include "nudge/feedback.hpp"
-#include "word.hpp"
+#include "nudge/word.hpp"
 
 namespace nudge {
 
