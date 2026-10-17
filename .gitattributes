@@ -1,0 +1,4 @@
+# Check out every text file with LF line endings, on every machine.
+# This repo's word lists are read line by line; a Windows CR at the end of a
+# line ("crane\r") would break them. See plan §3.
+* text=auto eol=lf

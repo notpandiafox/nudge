@@ -249,7 +249,7 @@ ctest --test-dir build -L slow --output-on-failure
 cmake -S . -B build-cov -G Ninja -DCMAKE_BUILD_TYPE=Debug -DNUDGE_COVERAGE=ON
 cmake --build build-cov
 ctest --test-dir build-cov -L fast
-gcovr -r . --object-directory build-cov --filter solver/src/ --filter solver/include/ --fail-under-line 100 --fail-under-function 100 --exclude-throw-branches --exclude-unreachable-branches --txt
+gcovr -r . --object-directory build-cov --filter solver/src/ --filter solver/include/ --fail-under-line 100 --fail-under-function 100 --exclude-throw-branches --exclude-unreachable-branches --txt --delete
 
 # Python script tests with coverage
 pytest scripts/tests --cov=scripts --cov-config=scripts/.coveragerc --cov-fail-under=100
@@ -786,8 +786,10 @@ done if it adds a line no test runs.
 
 - Top-level and `solver/` CMake files; GoogleTest through `FetchContent`;
   the `NUDGE_BUILD_TESTS` and `NUDGE_COVERAGE` options.
-- `.gitattributes`, `.clang-format`, `.clang-tidy`, `scripts/.coveragerc`,
-  `.gitignore` (`build*/`, `node_modules/`).
+- `.gitattributes`, `.clang-format`, `.clang-tidy`, `.gitignore`
+  (`build*/`, `node_modules/`).
+- GoogleTest's download is pinned by its SHA256 hash, so a changed archive
+  stops the build instead of being used silently.
 - One small real library function with a test, so the coverage gate measures
   something.
 - CI jobs: GCC build and fast tests, Clang build and fast tests, lint,
@@ -839,7 +841,8 @@ rarely produce.
 
 - `import_word_lists.py`, run once to create `data/answers.inc` and
   `data/guesses.inc`; `data/NOTICE`; `WordLists::builtin()` and
-  `WordLists::fromWords()`.
+  `WordLists::fromWords()`; `scripts/.coveragerc` (moved here from T1, since
+  nothing reads it before the script exists).
 - C++ tests: 2,309 answers, 14,855 guesses, every answer in the guess list,
   sorted, no duplicates, every word 5 letters a–z. `fromWords` rejects
   unsorted input it can't fix, duplicates, and an answer missing from the
@@ -1146,7 +1149,7 @@ can't break CI unexpectedly.
 | `gcc` | GCC Release build, fast tests, then slow tests | T1 (slow from T7) |
 | `clang` | Clang Release build, fast tests | T1 |
 | `sanitizers` | Clang Debug build with `-fsanitize=address,undefined`, fast tests | T2 |
-| `lint` | clang-format check, clang-tidy using the exported compile commands | T1 |
+| `lint` | clang-format check on all solver files; clang-tidy on the library sources (`solver/src`), using the exported compile commands | T1 |
 | `coverage` | Coverage build, fast tests, gcovr gate at 100%; uploads the report | T1 |
 | `python` | pytest with the coverage gate at 100% | T3 |
 | `wasm` | emsdk and Node 24, WebAssembly build; from T12: native tree dump plus Node tests | T4 (tests from T12) |
@@ -1154,6 +1157,8 @@ can't break CI unexpectedly.
 
 *Why Linux when you develop on Windows:* AddressSanitizer (which catches memory
 bugs like reading past the end of an array) isn't available with MinGW GCC.
+Checked in T1: MinGW GCC 12.2 ships neither `libasan` nor `libubsan`, so both
+sanitizers only run in CI.
 CI runs it on every push without changing your setup.
 
 *Why a Clang job:* your machine and the `gcc` job both use GCC. Clang is a

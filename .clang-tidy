@@ -1,0 +1,16 @@
+# Checks that find real bugs and slow code, without style noise.
+Checks: >
+  -*,
+  bugprone-*,
+  -bugprone-easily-swappable-parameters,
+  performance-*,
+  portability-*,
+  modernize-*,
+  -modernize-use-trailing-return-type,
+  -modernize-use-nodiscard,
+  readability-braces-around-statements,
+  readability-else-after-return,
+  readability-redundant-*,
+  readability-simplify-boolean-expr
+WarningsAsErrors: "*"
+HeaderFilterRegex: "solver/(include|src)/.*"
