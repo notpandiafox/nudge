@@ -1,5 +1,6 @@
 add_library(nudge_solver
     src/feedback.cpp
+    src/ranking.cpp
     src/text_format.cpp
     src/word.cpp
     src/word_lists.cpp
@@ -22,6 +23,8 @@ function(nudge_compile_options target)
     target_link_options(${target} PRIVATE $<$<BOOL:${NUDGE_COVERAGE}>:--coverage>)
 endfunction()
 nudge_compile_options(nudge_solver)
+
+add_subdirectory(bench)
 
 if(NUDGE_BUILD_TESTS)
     add_subdirectory(tests)

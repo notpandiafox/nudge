@@ -554,10 +554,38 @@ of "a few bad guesses":
 - **Worst fallback position:** the first guess and pattern that leave no
   answer-list word but the most guess-list words.
 
-**If T4 shows the budget is met** natively and in WebAssembly for both worst
-cases: nothing more is needed.
+**T4 results** (`solver/bench/nudge_spike`, best of 5 runs, the developer's
+laptop; one hint = bucket counts for all 14,855 guesses against the candidates):
 
-**If it isn't, the options, each with what it actually removes:**
+| Worst case | Candidates left | Native (MinGW GCC 12, -O3) | WebAssembly (Emscripten 6.0.12, Node 24.19), warm | WebAssembly, cold |
+|---|---|---|---|---|
+| Opener: `xviii`, all gray | 1,549 answers | 246–254 ms | 321–327 ms | 324–353 ms |
+| Fallback: `sughs`, only the last S green | 2,398 guess-list words | 313–323 ms | 428–434 ms | 430–433 ms |
+
+"Warm" is the best of 5 runs after the worst-case search has already run the
+same code millions of times. "Cold" is a fresh process that only filters the
+candidates once and computes one hint, the way a player's first hint runs
+(`nudge_spike <opener> <pattern> answers|guesses`); ranges are over 3 rounds.
+Cold and warm are close: the worst cold run was 353 ms for the opener case,
+once, and 433 ms for fallback.
+
+Native and WebAssembly produced identical checksums, so both did exactly the
+same work with the same results. WebAssembly took about 1.3 to 1.4 times as
+long as native.
+
+**Decision: the budget is met; no design change.** Both worst cases fit in
+500 ms in WebAssembly, warm and cold. The fallback case has the least room
+(433 ms at worst, about 13% to spare). These were measured in Node (V8);
+Firefox runs WebAssembly with a different engine, so the extension's
+end-to-end check measures the real browser. The timings also don't yet include the strategies' own
+scoring (entropy adds one `log2` per non-empty bucket). T11 measures the real
+strategies. If entropy's fallback case then goes over, the first fix is
+internal and needs no spec change: compute the 0–242 code directly in
+`feedbackCode` instead of building five tiles and encoding them.
+
+**If T4 had shown the budget was missed**, these were the options, each with
+what it actually removes (kept for T11, in case the real strategies change the
+picture):
 
 | Option | Removes | Cost |
 |---|---|---|

@@ -75,6 +75,28 @@ jobs:
       - name: clang-tidy
         run: clang-tidy-18 -p build $(git ls-files 'solver/src/*.cpp')
 
+  # Builds the solver as WebAssembly and runs the T4 speed check under Node.
+  # Times are reported, not enforced: shared CI machines vary too much (plan §8.5).
+  wasm:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: mymindstorm/setup-emsdk@v16
+        with:
+          version: 6.0.12
+      - name: Install Ninja
+        run: sudo apt-get update && sudo apt-get install -y ninja-build
+      - name: Configure
+        run: emcmake cmake -S . -B build-wasm -G Ninja -DCMAKE_BUILD_TYPE=Release -DNUDGE_WARNINGS_AS_ERRORS=ON
+      - name: Build
+        run: cmake --build build-wasm
+      - name: Speed check (warm, finds the worst cases)
+        run: node build-wasm/solver/bench/nudge_spike.js
+      - name: Speed check (cold, one hint per fresh process)
+        run: |
+          node build-wasm/solver/bench/nudge_spike.js xviii 0 answers
+          node build-wasm/solver/bench/nudge_spike.js sughs 162 guesses
+
   python:
     runs-on: ubuntu-24.04
     steps:
