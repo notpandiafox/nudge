@@ -19,16 +19,18 @@ possible outcome leaves the fewest words.
 
 ## Functional requirements
 
-- For a guess `g` and the current candidates, group the candidates by
-  `computeFeedback(g, candidate)` and take the largest group's size, `W(g)`.
-- `score(g) = -W(g)`, so a smaller worst case scores higher (the shared
-  interface treats higher as better).
+- For a guess `g`, the solver groups the candidates by
+  `computeFeedback(g, candidate)` and hands the strategy the group sizes
+  (`BucketCounts`). The largest group's size is `W(g)`.
+- `score(counts, total) = -W(g)`, so a smaller worst case scores higher (the
+  shared interface treats higher as better).
 - The solver evaluates every word in the guess pool, not only the candidates.
   In normal mode that is the full guess list; in hard mode it is the allowed
   subset.
 - Ties use the shared tie-break. Its first rule (prefer a candidate) is
   Knuth's original tie-break; the other two rules are this project's.
-- `precomputedFirstGuess()` returns the stored minimax first guess.
+- `name()` returns `"minimax"`. The minimax first guess is stored with the
+  word lists (see the shared spec's "Precomputed first guess").
 
 ## Acceptance criteria
 

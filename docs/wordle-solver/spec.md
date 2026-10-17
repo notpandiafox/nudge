@@ -33,6 +33,9 @@ state. The solver only ever suggests; it never types into the game.
   it is the full guess list. In hard mode it is the subset of the guess list
   that hard mode allows (see below).
 - **Tested letter**: any letter that appears in any veteran word.
+- **Letter case**: all words are handled in lowercase. Every public function
+  that takes a word accepts upper or lower case and converts it to lowercase
+  first. Every word the solver returns is lowercase.
 
 ## Functional requirements
 
@@ -47,19 +50,22 @@ state. The solver only ever suggests; it never types into the game.
    letters not already matched by a `Green` or an earlier `Yellow`),
    otherwise `Gray`.
 
-This is the only feedback implementation in the project. Both strategies,
-the candidate filter, hard mode and the tests all use it.
+This is the only feedback implementation in the shipped code. Both
+strategies, the candidate filter and hard mode use it. The tests also keep a
+separate, deliberately simple version, used only to check this one.
 
 ### Word lists
 
-- Two static word-list files ship inside the extension: the answer list and
-  the guess list. They are never fetched at runtime, from NYT or anywhere else.
+- The answer list and the guess list are compiled into the solver from two
+  files in `data/`. They are never fetched at runtime, from NYT or anywhere
+  else.
 - Both use the most recent version available when the lists are pinned. Each
   file records its source and the date it was retrieved, so an update is a
   deliberate, reviewable change.
 - **Answer list source:** [stuartpb/wordles](https://github.com/stuartpb/wordles),
   file `wordles.json`: 2,309 hand-picked answer words, in the original
-  game's daily order. Last updated February 2022. The repo has no license
+  game's daily order (the solver stores them sorted; the order isn't used).
+  Last updated February 2022. The repo has no license
   file; it describes common English word lists as commonly considered public
   domain.
 - **Guess list source:** [tabatkins/wordle-list](https://github.com/tabatkins/wordle-list)
@@ -74,18 +80,34 @@ the candidate filter, hard mode and the tests all use it.
 
 ### Solver behavior
 
-- With no veteran words, `getBestGuess()` returns the current strategy's
-  precomputed first guess (see "Precomputed first guess").
+- With no veteran words, `getBestGuess()` returns the precomputed first guess
+  for the current strategy (see "Precomputed first guess").
 - With veteran words, `getBestGuess()` scores every word in the guess pool
   against the current candidates with the current strategy, and returns the
   best-scoring word, using the tie-break below.
 - When exactly one candidate remains, `getBestGuess()` returns it.
-- When the last veteran word's pattern is all `Green`, the game is solved and
-  `getBestGuess()` returns that word.
+- **An all-`Green` pattern always means solved.** `addFeedbackPattern`
+  accepts it for any valid 5-letter word, even one in neither word list,
+  without filtering candidates, entering fallback mode, or returning
+  `ImpossibleState`. From then on `getBestGuess()` returns that word.
+- **After the game is solved**, `addFeedbackPattern` returns `GameOver` and
+  changes nothing, since the real game accepts no more guesses.
+
+### Starting a new game
+
+- `reset()` clears the game: the veteran words, and with them fallback mode
+  and the solved state. It keeps the strategy and the hard-mode setting: the
+  strategy is the user's choice and hard mode is the game's setting, so
+  neither belongs to one game.
+- The solver never resets itself. The extension calls `reset()` only when the
+  Wordle board on the page is empty, which is when a new game starts.
 
 ### Tie-break (shared by both strategies)
 
-When two or more guesses have the same score, pick by these rules in order:
+Two guesses are **tied** when both scores are within `1e-9` of the best score.
+The same constant is used for both strategies; minimax scores are whole
+numbers, so for minimax this means exactly equal. Among the tied guesses,
+pick by these rules in order:
 
 1. Prefer a guess that is still a candidate, so a lucky guess wins outright.
    (If none of the tied guesses is a candidate, keep all of them.)
@@ -101,8 +123,18 @@ Rule 3 means every tie is resolved, so the result is always the same.
   solver (`setHardMode`). How it detects this is an extension question,
   tracked in the top-level intent.
 - In hard mode the guess pool only contains guesses that hard mode allows:
-  every `Green` letter stays in its position, and every `Yellow` letter
-  appears somewhere in the guess.
+  - every `Green` letter stays in its position;
+  - **repeated letters are counted:** for each earlier guess, count its
+    `Green` plus `Yellow` tiles of each letter. The new guess must contain at
+    least that many copies of the letter, using the highest count from any
+    one earlier guess. For example, after `SPEED` gets S, E and E lit up, the
+    next guess needs an S and two E's: `EASEL` is allowed, `SENOR` is not;
+  - a `Yellow` letter may be anywhere in the guess, including the same
+    position;
+  - `Gray` tiles add no requirement.
+- This rule is deliberately at least as strict as NYT's. If NYT only checks
+  that each letter appears once, the solver skips a few guesses NYT would
+  allow, but never suggests one NYT rejects.
 - Switching hard mode on or off mid-game recomputes the guess pool; the
   veteran words are kept.
 
@@ -136,8 +168,13 @@ solver would run out of candidates and show the error on a valid board.
 
 ### Precomputed first guess
 
-- Each strategy has its own first guess, computed ahead of time by a build
-  script from the pinned word lists, and stored as data.
+- Each strategy has its own first guess, stored together with the word lists
+  it was computed from.
+- It is computed ahead of time by a tool you run by hand (not during the
+  build, because the WebAssembly build can't run a native program), and the
+  result is committed and compiled in.
+- For word lists without stored first guesses (for example, small lists in
+  tests), the solver computes the first guess when it's needed.
 - It is the same in hard mode, because hard mode has nothing to restrict
   before the first guess.
 - A test recomputes it from the word lists and fails if the stored value is
@@ -157,23 +194,38 @@ struct VeteranWord {
     FeedbackPattern pattern;
 };
 
-enum class Status { Ok, InvalidWord, InvalidPattern, ImpossibleState };
+enum class Status { Ok, InvalidWord, InvalidPattern, ImpossibleState,
+                    UnknownStrategy, GameOver };
 
 // Shared feedback function
 FeedbackPattern computeFeedback(const std::string& guess, const std::string& answer);
 
+// One counter per possible feedback pattern (3^5 = 243): how many candidates
+// would produce that pattern for a given guess.
+using BucketCounts = std::array<std::uint32_t, 243>;
+
 class ScoringStrategy {           // MinimaxStrategy and EntropyStrategy implement this
 public:
-    virtual ~ScoringStrategy() = default;
+    virtual ~ScoringStrategy();
+    // Scores one guess from its bucket counts; total = number of candidates.
     // Higher is always better.
-    virtual double score(const std::string& guess,
-                         const std::vector<std::string>& candidates) const = 0;
-    virtual std::string precomputedFirstGuess() const = 0;
+    virtual double score(const BucketCounts& counts, std::size_t total) const = 0;
+    virtual std::string_view name() const = 0;   // "minimax" or "entropy"
+};
+
+// Answer list, guess list, and the stored first guess for each strategy.
+class WordLists {
+public:
+    static const WordLists& builtin();           // the compiled-in lists
+    // For tests: sorts and checks the words; no stored first guesses.
+    static std::optional<WordLists> fromWords(std::vector<std::string> answers,
+                                              std::vector<std::string> guesses);
 };
 
 class WordleSolver {
 public:
-    WordleSolver(std::unique_ptr<ScoringStrategy> strategy, bool hardMode);
+    WordleSolver(std::unique_ptr<ScoringStrategy> strategy, bool hardMode,
+                 const WordLists& lists = WordLists::builtin());
 
     Status addFeedbackPattern(const std::string& word, const FeedbackPattern& pattern);
     std::string getBestGuess() const;
@@ -181,7 +233,8 @@ public:
     std::size_t getRemainingCount() const;
     const std::vector<VeteranWord>& getVeteranWords() const;
     bool isUsingFallback() const;
-    void setStrategy(std::unique_ptr<ScoringStrategy> strategy);
+    Status setStrategy(std::unique_ptr<ScoringStrategy> strategy);
+    Status setStrategy(std::string_view name);   // "minimax" or "entropy"
     void setHardMode(bool on);
     void reset();
 };
@@ -190,9 +243,19 @@ public:
 - `addFeedbackPattern` accepts any word of exactly 5 letters A–Z, even one
   that isn't in the guess list: the real game already accepted it, so the
   solver trusts it. The guess list only limits what the solver *suggests*.
-- It returns `InvalidWord` for a word that isn't exactly 5 letters A–Z, and
-  `InvalidPattern` for a pattern that isn't 5 values. In both cases the state
-  is unchanged.
+- It returns `InvalidWord` for a word that isn't exactly 5 letters A–Z,
+  `InvalidPattern` for a pattern containing a value other than the three
+  colors (or, from JavaScript, pattern text that isn't 5 of `G`, `Y`, `X`),
+  and `GameOver` once the game is solved. In each case the state is
+  unchanged.
+- `setStrategy` returns `UnknownStrategy` for an empty strategy pointer or a
+  name it doesn't know (names are lowercase: `"minimax"`, `"entropy"`). The
+  current strategy and the game state are unchanged.
+- The constructor requires a strategy. Constructing without one is a
+  programming error, caught by an assertion in debug builds. The JavaScript
+  wrapper always constructs with the default strategy (minimax, until the
+  top-level intent's open question about the default is decided), then calls
+  `setStrategy(name)`.
 - Errors are returned as a `Status`, not thrown, because exceptions are off by
   default in Emscripten's WebAssembly builds.
 
@@ -203,13 +266,16 @@ public:
 - **Latency:** a hint appears within 1 second of the user asking, on every
   turn, in normal and hard mode. Measured from the click to the hint being
   shown, in Firefox on the developer's laptop. The first turn is effectively
-  instant because the first guess is precomputed.
+  instant because the first guess is precomputed. The solver's share of that
+  second is 500 ms (computing the hint); the rest is for the extension
+  (reading the board, sending it to the solver, showing the hint).
 - **Offline:** the solver needs no network access.
 
 ## Acceptance criteria
 
-- `computeFeedback` matches these hand-checked cases (and each is also
-  confirmed once against the real game):
+- `computeFeedback` matches these hand-checked cases (the rule itself is
+  checked once against the original game's code, since NYT's daily answer
+  can't be chosen):
   - guess `SPEED`, answer `ERASE` → Yellow, Gray, Yellow, Yellow, Gray
   - guess `SPEED`, answer `ABIDE` → Gray, Gray, Yellow, Gray, Yellow
   - guess `LEVEL`, answer `HELLO` → Yellow, Green, Gray, Gray, Yellow
@@ -219,7 +285,21 @@ public:
 - The same input, run 10 times, returns the same guess every time.
 - In hard mode, every suggested guess is allowed by hard mode, checked across
   full simulated games for every word in the answer list.
+- Hard mode with repeated letters: after `SPEED` against `ERASE`, `EASEL` is
+  allowed and `SENOR` is not; after `SPEED` against `ABIDE` (one E Yellow,
+  one Gray, D Yellow), a guess with one E and a D is allowed.
 - Every word in the answer list is also in the guess list.
+- An all-`Green` pattern for a word in neither list returns `Ok`, and
+  `getBestGuess()` then returns that word.
+- After the game is solved, `addFeedbackPattern` returns `GameOver` and
+  leaves the veteran words unchanged.
+- `reset()` clears the veteran words, fallback mode and the solved state, and
+  keeps the strategy and the hard-mode setting.
+- `"CRANE"`, `"Crane"` and `"crane"` are all accepted and stored as
+  `"crane"`.
+- `setStrategy` with an empty pointer, or with `"knuth"` or `"Minimax "`,
+  returns `UnknownStrategy` and changes nothing; `"minimax"` and `"entropy"`
+  return `Ok`.
 - A 5-letter word that isn't in the guess list is accepted as a veteran word
   and narrows the candidates like any other guess. A 4- or 6-letter word, or
   one with a non-letter, returns `InvalidWord`.
@@ -230,8 +310,10 @@ public:
   `ImpossibleState` and leaves `getRemainingCount()`, `getVeteranWords()`
   and `isUsingFallback()` unchanged.
 - The stored first guess for each strategy matches a fresh recomputation.
-- The latency benchmark records the slowest turn across full games; it stays
-  under 1 second.
+- The latency benchmark records the slowest turn, including the worst
+  possible first guess and the worst early fallback position; computing the
+  hint stays under 500 ms on the developer's laptop, natively and in
+  WebAssembly.
 
 ## Resolved open questions
 
@@ -242,19 +324,23 @@ public:
 | Where the word lists come from | Answers from stuartpb/wordles, guesses from tabatkins/wordle-list |
 | What if NYT uses an answer missing from the list? | Fallback mode: take candidates from the guess list before reporting an impossible board |
 | Prove "within 6" on every answer, or a sample? | Every word in the answer list (normal mode) |
-| First guess precomputed or hardcoded? | Precomputed by a build script, checked by a test |
+| First guess precomputed or hardcoded? | Precomputed by a tool run by hand, stored with the word lists, checked by a test |
 | Impossible board state | Rejected with `ImpossibleState`; extension shows the report message |
 | Where "report this issue" links to | The project's GitHub issues page |
+| A won game with a word in neither list | All-green always means solved, never `ImpossibleState` |
+| Upper or lower case input | Either is accepted and converted to lowercase; output is lowercase |
+| Unknown or empty strategy | `setStrategy` returns `UnknownStrategy` and keeps the current strategy |
+| What counts as a tie | Within `1e-9` of the best score, one constant for both strategies |
+| Guesses after the game is won | `GameOver`, nothing changes |
+| When a new game starts | The extension calls `reset()` only when the Wordle board is empty; `reset()` keeps the strategy and hard-mode setting |
+| How strategies score | From the bucket counts the solver builds (`score(counts, total)`) |
+| Where the first guesses live | With the word lists; computed when not stored |
+| The answer list's daily order | Not used; the lists are stored sorted |
 | Hard mode in scope? | Yes. Extension detects it; solver only suggests allowed guesses |
+| Hard mode with repeated letters | Counted: at least as many copies as were lit up Green or Yellow in one earlier guess (at least as strict as NYT) |
 | Latency target | Under 1 second per hint, every turn |
 | Do the strategies share tie-break behavior? | Yes, one shared tie-break |
 | Does entropy have its own word lists? | No, both strategies use the same lists |
-
-## Carried forward (needs a decision)
-
-- **Hard-mode rule details.** Confirm against the real game how NYT treats
-  repeated letters in hard mode (for example two `Yellow` E's), before
-  finalizing the guess-pool filter.
 
 ## Out of scope
 
@@ -278,3 +364,9 @@ public:
   will never suggest it.
 - **The 1-second target is measured on one machine.** A slower laptop could
   exceed it. Acceptable for v1, but worth knowing.
+- **Fallback can start late (accepted for v1).** If the real answer is
+  missing from the answer list but other answer-list words still fit the
+  clues, the solver keeps narrowing those words, and can even present a
+  wrong one as the last candidate. Fallback only starts once that word is
+  ruled out. Every fix makes normal hints worse, so this is documented and
+  pinned by a test instead.

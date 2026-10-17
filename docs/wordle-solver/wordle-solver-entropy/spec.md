@@ -21,16 +21,21 @@ into the most, and most even, groups.
 
 ## Functional requirements
 
-- For a guess `g`, group the candidates by `computeFeedback(g, candidate)`,
-  and compute `score(g) = Σ p · log₂(1 / p)` over the buckets.
+- For a guess `g`, the solver groups the candidates by
+  `computeFeedback(g, candidate)` and hands the strategy the group sizes
+  (`BucketCounts`). The strategy computes
+  `score(counts, total) = Σ p · log₂(1 / p)` over the non-empty buckets, with
+  `p = n / total`.
 - A higher score is better, matching the shared interface.
 - Uses log base 2, so scores are in bits.
 - The solver evaluates every word in the guess pool, not only the candidates.
-- **Ties:** two guesses are tied when their scores differ by less than
-  `1e-9`. Floating-point rounding can make mathematically equal scores
-  differ slightly; without a tolerance, rounding would decide the tie, not
-  the shared tie-break.
-- `precomputedFirstGuess()` returns the stored entropy first guess.
+- **Ties:** a guess is tied with the best when its score is within `1e-9` of
+  the best score (the shared spec's definition, same constant as minimax).
+  Floating-point rounding can make mathematically equal scores differ
+  slightly; without a tolerance, rounding would decide the tie, not the
+  shared tie-break.
+- `name()` returns `"entropy"`. The entropy first guess is stored with the
+  word lists (see the shared spec's "Precomputed first guess").
 
 ## Acceptance criteria
 
