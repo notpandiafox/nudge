@@ -15,8 +15,8 @@ TEST(StatusToText, NamesEveryStatus) {
 }
 
 TEST(StatusToText, ValueOutsideTheEnumIsUnknown) {
-    // Status has a fixed underlying type (int), so any int converts to a valid
-    // Status value. One that matches no enumerator must not crash the caller.
+    // Status has a fixed underlying type (std::uint8_t), so any value of that type
+    // is a valid Status. One that matches no enumerator must not crash the caller.
     EXPECT_EQ(statusToText(static_cast<Status>(99)), "Unknown");
 }
 

@@ -13,4 +13,5 @@ Checks: >
   readability-redundant-*,
   readability-simplify-boolean-expr
 WarningsAsErrors: "*"
-HeaderFilterRegex: "solver/(include|src)/.*"
+# [/\\] so headers are checked on Windows paths too, not only in CI.
+HeaderFilterRegex: "solver[/\\\\](include|src)[/\\\\].*"
