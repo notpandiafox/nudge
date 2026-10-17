@@ -315,8 +315,9 @@ Nothing else needed it.
 - Internally, a pattern is packed into one number 0–242: `Gray = 0`,
   `Yellow = 1`, `Green = 2`, and position `i` is worth `3^i`. All gray is 0,
   all green is 242.
-- `encode` and `decode` convert between the two forms, with a test that
-  round-trips all 243 values.
+- `encode` turns a pattern into its code, with a test that all 243 patterns
+  get different codes from 0 to 242. (No `decode`: nothing needs to turn a
+  code back into a pattern. Add it the day something does.)
 
 *Why 0–242:* there are 3 colors and 5 positions, so exactly 3⁵ = 243 possible
 patterns. That fits in one byte, and grouping candidates needs no hash map:
@@ -330,7 +331,6 @@ All checking and converting of outside input happens in one place in the core:
 |---|---|---|
 | `Word::parse(text)` | any text | a valid word (5 letters, converted to lowercase), or nothing |
 | `parsePattern(text)` | text like `"XYGXX"` (also accepts lowercase) | a `FeedbackPattern`, or nothing |
-| `patternToText(pattern)` | a pattern | text like `"XYGXX"` |
 | `statusToText(status)` | a `Status` | `"Ok"`, `"InvalidWord"`, … |
 | `makeStrategy(name)` | `"minimax"` or `"entropy"` | a strategy, or nothing |
 
@@ -812,9 +812,10 @@ that measures nothing passes silently.
 
 ### T2. Words, patterns and the feedback function
 
-- `Word` and `Word::parse`, `parsePattern`, `patternToText`, `statusToText`,
-  the 0–242 `encode`/`decode`, the fast feedback function and the public
-  `computeFeedback`.
+- `Word` and `Word::parse`, `parsePattern`, `statusToText`, the 0–242
+  `encode`, the fast feedback function and the public `computeFeedback`.
+  (`patternToText` and `decode` were dropped in T2: no function returns a
+  pattern to JavaScript, and nothing turns a code back into a pattern.)
 - `tests/reference/simple_feedback`: a deliberately simple version written
   with strings.
 - Tests:
@@ -822,14 +823,18 @@ that measures nothing passes silently.
   - `"CRANE"`, `"Crane"`, `"crane"` all become `crane`; 4- and 6-letter
     words and non-letters are rejected;
   - pattern text: valid, wrong length, wrong characters;
-  - the 243-value round trip;
+  - all 243 patterns get different codes from 0 to 242;
   - **exhaustive comparison** with the simple version on every pair of
     5-letter strings over a 3-letter alphabet (243 × 243 = 59,049 pairs),
     where nearly every pair has repeated letters, including triples and
     more;
-  - comparison on 100,000 random pairs of real words, with a fixed seed.
-- **Mutation check** (§8.7): remove the `counts -= 1` step and confirm the
-  tests fail, then restore it. Note the result in the commit message.
+  - comparison on 100,000 random pairs of 5-letter strings over a–z, with a
+    fixed seed (the real word lists only arrive in T3);
+- **Mutation check** (§8.7): remove the step that uses up a letter's copy
+  and confirm the tests fail, then restore it. Done in T2: 4 tests failed
+  (both hand-checked case tests and both reference comparisons).
+- The `sanitizers` CI job, and the CI actions moved to their Node 24
+  versions (v7).
 
 **Done when:** all fast tests pass.
 
