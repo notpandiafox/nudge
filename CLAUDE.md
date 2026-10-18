@@ -43,5 +43,9 @@ On this Windows machine, CMake and Ninja come from CLion; put them on PATH first
 `C:/Program Files/JetBrains/CLion 2024.1.3/bin/cmake/win/x64/bin` and
 `C:/Program Files/JetBrains/CLion 2024.1.3/bin/ninja/win/x64`. If CLion has updated, replace
 `2024.1.3` with the new version folder. The compiler is MinGW GCC 12.
+graphify isn't on PATH either; run it by its full path:
+`C:/Users/oscar/AppData/Local/Python/pythoncore-3.14-64/Scripts/graphify.exe` (for example
+`.../graphify.exe update .`). Its output, `graphify-out/`, is ignored through `.git/info/exclude`,
+so it stays on this machine and is never committed.
 clang-tidy runs in CI (Linux); locally CLion's clang-tidy only works on `solver/src` files, with
 `--extra-arg=--target=x86_64-w64-mingw32`.

@@ -4,6 +4,7 @@
 #include <cassert>
 
 #include "feedback_code.hpp"
+#include "ranking.hpp"
 
 namespace nudge {
 namespace {
@@ -71,6 +72,13 @@ Status WordleSolver::addFeedbackPattern(const std::string& word, const FeedbackP
     return Status::Ok;
 }
 
+std::string WordleSolver::getBestGuess() const {
+    if (view_.solved) {
+        return view_.candidates.front().text();
+    }
+    return rankBest(lists_.guesses(), view_.candidates, *strategy_, view_.triedLetters).text();
+}
+
 std::size_t WordleSolver::getRemainingCount() const { return view_.candidates.size(); }
 
 const std::vector<VeteranWord>& WordleSolver::getVeteranWords() const { return veterans_; }
@@ -98,6 +106,9 @@ WordleSolver::View WordleSolver::derive(std::span<const VeteranWord> veterans) c
         clues.push_back({*Word::parse(veteran.word), encode(veteran.pattern)});
     }
     View view;
+    for (const Clue& clue : clues) {
+        view.triedLetters |= clue.guess.mask();
+    }
     if (!veterans.empty() && isAllGreen(veterans.back().pattern)) {
         // Solved, even for a word in neither list (spec: all green always means solved).
         view.solved = true;

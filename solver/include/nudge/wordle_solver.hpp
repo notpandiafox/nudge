@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <span>
 #include <string>
@@ -29,6 +30,8 @@ public:
                  WordLists lists = WordLists::builtin());
 
     Status addFeedbackPattern(const std::string& word, const FeedbackPattern& pattern);
+    // The suggested next guess, lowercase. Once solved, the winning word.
+    std::string getBestGuess() const;
 
     std::size_t getRemainingCount() const;
     const std::vector<VeteranWord>& getVeteranWords() const;
@@ -41,7 +44,8 @@ private:
     struct View {
         bool solved = false;
         bool fallback = false;
-        std::vector<Word> candidates;
+        std::vector<Word> candidates;    // sorted
+        std::uint32_t triedLetters = 0;  // Word::mask() of every veteran word, combined
     };
     View derive(std::span<const VeteranWord> veterans) const;
 

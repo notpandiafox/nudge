@@ -22,6 +22,9 @@ public:
     // The word in lowercase, e.g. "crane".
     std::string text() const;
 
+    // One bit per different letter in the word (bit 0 = a ... bit 25 = z).
+    std::uint32_t mask() const;
+
     // Compares letter by letter, so sorting Words sorts them alphabetically.
     auto operator<=>(const Word&) const = default;
 

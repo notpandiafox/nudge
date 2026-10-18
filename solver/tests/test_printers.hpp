@@ -4,6 +4,7 @@
 
 #include "nudge/feedback.hpp"
 #include "nudge/text_format.hpp"
+#include "nudge/word.hpp"
 
 namespace nudge {
 
@@ -17,5 +18,7 @@ inline void PrintTo(Tile tile, std::ostream* out) {
 }
 
 inline void PrintTo(Status status, std::ostream* out) { *out << statusToText(status); }
+
+inline void PrintTo(const Word& word, std::ostream* out) { *out << word.text(); }
 
 }  // namespace nudge

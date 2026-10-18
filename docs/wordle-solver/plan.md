@@ -511,6 +511,9 @@ multiply-and-add steps differently on different machines.
 
 ### 5.8 Exact shortcuts
 
+*Not built: T6 tried this and deleted it after review; see "Done in T6". Kept
+here as the record of the idea.*
+
 These skip work without ever changing the result, for both strategies.
 `rankBest` applies them before the full scoring loop:
 
@@ -583,6 +586,19 @@ scoring (entropy adds one `log2` per non-empty bucket). T11 measures the real
 strategies. If entropy's fallback case then goes over, the first fix is
 internal and needs no spec change: compute the 0–242 code directly in
 `feedbackCode` instead of building five tiles and encoding them.
+
+**T6 review timings** (native, -O3, full `rankBest` including scoring; from
+the reviewers' scratch measurements, so T11 starts from them):
+
+| Case | Minimax-shaped scoring | Entropy-shaped scoring |
+|---|---|---|
+| Worst opener (1,549 candidates) | 250–254 ms | 286–290 ms |
+| Worst fallback (2,398 candidates) | 316–325 ms | 337–341 ms |
+| Empty game (2,309 candidates, until T9 stores first guesses) | 372–376 ms | not measured |
+
+At T4's WebAssembly ratio of 1.3–1.4, entropy's fallback case is about
+445–477 ms and the empty game about 485–520 ms, so T9's stored first guesses
+are needed to keep turn 1 inside the budget.
 
 **If T4 had shown the budget was missed**, these were the options, each with
 what it actually removes (kept for T11, in case the real strategies change the
@@ -975,6 +991,34 @@ T10, which meant rewriting `addFeedbackPattern` after it was written. With
 counts, not which guess they belong to, so a fake strategy can't easily
 create a tie on a chosen guess. Testing `pickWinner` on its own avoids that
 problem entirely.
+
+**Done in T6, and how it differs from the list above:**
+- **No shortcuts.** T6 first built shortcut 3 alone (1 and 2 are special
+  cases of it). The multi-model review then found three problems: it was only
+  exact for strategies that score an all-separate split *strictly* better (the
+  written rule allowed ties, and a constant-score strategy gave different
+  answers); it ignored the guess pool, so in hard mode (T10) it could suggest
+  an illegal word; and it saves almost nothing, since it can only run with at
+  most 243 candidates, where full scoring takes at most about 65 ms, while the
+  slow hints have over 1,500 candidates. So it was deleted. A single candidate
+  still wins through rule 1: it scores the best possible, and any guess that
+  ties it is not a candidate.
+- **No separate `scoreGuesses`:** it's the loop in `rankBest`, its only user.
+- **`assert`s** guard `pickWinner`'s preconditions (some guesses, sorted
+  candidates) and catch a NaN score, which would otherwise drop out of every
+  tie comparison and crash.
+- **Tried letters only matter between tied non-candidates.** Every tried
+  letter's presence is fixed by its color, so all candidates contain the same
+  tried letters and rule 2 ranks them the same with or without them. The
+  solver test for tried letters is built on that case.
+- **Mutation checks** (five, not one): rule 2 reversed, rule 1 removed, the
+  tolerance removed, rule 2 applied before rule 1, and tried letters never
+  recorded. All five are caught. The rule-order one is caught only by
+  `Rule1ComesBeforeRule2`, the gap the review found. (While the shortcut
+  existed, a mutation making it too eager first survived, which is how its
+  `bills`/`fills`/`hills` test case came about.)
+- **Determinism** is tested on 10 fresh solvers, as the spec asks, not by
+  asking one solver twice.
 
 ### T7. Minimax strategy
 

@@ -2,6 +2,7 @@
 
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <memory>
 
 #include "nudge/text_format.hpp"
@@ -14,6 +15,14 @@ namespace {
 struct FixedStrategy : ScoringStrategy {
     double score(const BucketCounts& /*counts*/, std::size_t /*total*/) const override { return 0; }
     std::string_view name() const override { return "fixed"; }
+};
+
+// Shaped like minimax: smaller worst group is better.
+struct WorstBucketStrategy : ScoringStrategy {
+    double score(const BucketCounts& counts, std::size_t /*total*/) const override {
+        return -static_cast<double>(*std::max_element(counts.begin(), counts.end()));
+    }
+    std::string_view name() const override { return "worst-bucket"; }
 };
 
 FeedbackPattern pattern(std::string_view text) { return *parsePattern(text); }
@@ -127,6 +136,51 @@ TEST(WordleSolver, EmptyStrategyIsRejectedAndChangesNothing) {
     EXPECT_EQ(solver.setStrategy(std::make_unique<FixedStrategy>()), Status::Ok);
     EXPECT_EQ(solver.getVeteranWords().size(), 1u);
     EXPECT_EQ(solver.getRemainingCount(), 1u);
+}
+
+TEST(WordleSolverBestGuess, IsTheWinningWordOnceSolved) {
+    WordleSolver solver = tinyGame();
+    ASSERT_EQ(solver.addFeedbackPattern("zesty", pattern("GGGGG")), Status::Ok);
+    EXPECT_EQ(solver.getBestGuess(), "zesty");
+}
+
+TEST(WordleSolverBestGuess, IsTheLastCandidate) {
+    WordleSolver solver = tinyGame();
+    ASSERT_EQ(solver.addFeedbackPattern("slate", pattern("XXGXG")), Status::Ok);
+    EXPECT_EQ(solver.getBestGuess(), "crane");
+}
+
+TEST(WordleSolverBestGuess, RanksAnEmptyGame) {
+    // FixedStrategy scores every guess the same, so all tie: rule 1 keeps the
+    // candidates crane and crate, both have 5 new letters, and rule 3 picks crane.
+    EXPECT_EQ(tinyGame().getBestGuess(), "crane");
+}
+
+TEST(WordleSolverBestGuess, SameInputGivesTheSameGuessOnFreshSolvers) {
+    // Shared spec: the same input, run 10 times, gives the same guess. Each run
+    // builds a new solver, so nothing can be remembered from an earlier run.
+    static const WordLists lists = *WordLists::fromWords(
+        {"bills", "fills", "hills", "kills", "mills"},
+        {"aaaaa", "bills", "fhkma", "fhkmx", "fills", "hills", "kills", "mills"});
+    for (int run = 0; run < 10; ++run) {
+        WordleSolver solver(std::make_unique<WorstBucketStrategy>(), false, lists);
+        ASSERT_EQ(solver.addFeedbackPattern("aaaaa", pattern("XXXXX")), Status::Ok);
+        EXPECT_EQ(solver.getBestGuess(), "fhkmx") << "run " << run;
+    }
+}
+
+TEST(WordleSolverBestGuess, UsesTheLettersAlreadyTried) {
+    // Tried letters only matter between tied non-candidates: every candidate
+    // contains exactly the same tried letters. Here the probes fhkma and fhkmx
+    // both separate all five -ills words, so they tie and beat every candidate.
+    static const WordLists lists = *WordLists::fromWords(
+        {"bills", "fills", "hills", "kills", "mills"},
+        {"aaaaa", "bills", "fhkma", "fhkmx", "fills", "hills", "kills", "mills"});
+    WordleSolver solver(std::make_unique<WorstBucketStrategy>(), false, lists);
+    ASSERT_EQ(solver.addFeedbackPattern("aaaaa", pattern("XXXXX")), Status::Ok);
+    // a is tried now: fhkmx has 5 new letters, fhkma only 4. Ignoring tried
+    // letters would let rule 3 pick fhkma.
+    EXPECT_EQ(solver.getBestGuess(), "fhkmx");
 }
 
 TEST(WordleSolver, BuiltinListsByDefault) {

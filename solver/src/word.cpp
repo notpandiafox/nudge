@@ -28,4 +28,12 @@ std::string Word::text() const {
     return text;
 }
 
+std::uint32_t Word::mask() const {
+    std::uint32_t bits = 0;
+    for (const std::uint8_t letter : letters_) {
+        bits |= std::uint32_t{1} << letter;
+    }
+    return bits;
+}
+
 }  // namespace nudge

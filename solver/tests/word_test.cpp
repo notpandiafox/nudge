@@ -16,6 +16,11 @@ TEST(WordParse, AnyCaseBecomesTheSameLowercaseWord) {
 
 TEST(WordText, IsTheWordInLowercase) { EXPECT_EQ(Word::parse("CRane")->text(), "crane"); }
 
+TEST(WordMask, HasOneBitPerDifferentLetter) {
+    // abbey: a (bit 0), b (bit 1), e (bit 4), y (bit 24); the second b adds nothing.
+    EXPECT_EQ(Word::parse("abbey")->mask(), (1u << 0) | (1u << 1) | (1u << 4) | (1u << 24));
+}
+
 TEST(WordParse, LettersAreNumberedFromA) {
     const auto word = Word::parse("azbyc");
     ASSERT_TRUE(word.has_value());
