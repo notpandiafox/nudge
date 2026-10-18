@@ -215,6 +215,36 @@ TEST(WordleSolverBestGuess, UsesTheLettersAlreadyTried) {
     EXPECT_EQ(solver.getBestGuess(), "fhkmx");
 }
 
+TEST(WordleSolverFirstGuess, IsTheStoredOneForTheCurrentStrategy) {
+    // Ranking would open with crane (FixedStrategy ties everything; rule 1 picks
+    // a candidate), so slate can only come from the stored value.
+    static const WordLists lists = *WordLists::fromWords(
+        {"crane", "crate"}, {"crane", "crate", "grate", "slate"}, {{"fixed", "slate"}});
+    WordleSolver solver(std::make_unique<FixedStrategy>(), false, lists);
+    EXPECT_EQ(solver.getBestGuess(), "slate");
+    // Only the first guess is stored: after one guess, ranking takes over again.
+    ASSERT_EQ(solver.addFeedbackPattern("grate", pattern("XGGGG")), Status::Ok);
+    EXPECT_EQ(solver.getBestGuess(), "crate");
+}
+
+TEST(WordleSolverFirstGuess, IsComputedWhenNoneIsStoredForTheStrategy) {
+    static const WordLists lists = *WordLists::fromWords(
+        {"crane", "crate"}, {"crane", "crate", "grate", "slate"}, {{"minimax", "slate"}});
+    WordleSolver solver(std::make_unique<FixedStrategy>(), false, lists);
+    EXPECT_EQ(solver.getBestGuess(), "crane");
+}
+
+TEST(WordleSolverFirstGuess, OnTheBuiltinListsInEitherMode) {
+    // Shared spec: the same in hard mode, which has nothing to restrict before
+    // the first guess. (Hard mode itself arrives in T10.)
+    for (const bool hardMode : {false, true}) {
+        WordleSolver solver(std::make_unique<MinimaxStrategy>(), hardMode);
+        EXPECT_EQ(solver.getBestGuess(), "olate") << "hard mode " << hardMode;
+        ASSERT_EQ(solver.setStrategy("entropy"), Status::Ok);
+        EXPECT_EQ(solver.getBestGuess(), "tarse") << "hard mode " << hardMode;
+    }
+}
+
 TEST(WordleSolver, BuiltinListsByDefault) {
     const WordleSolver solver(std::make_unique<FixedStrategy>(), false);
     EXPECT_EQ(solver.getRemainingCount(), 2'309u);

@@ -7,6 +7,8 @@
 #include <string>
 
 #include "nudge/text_format.hpp"
+#include "ranking.hpp"
+#include "test_printers.hpp"
 #include "tree_walk.hpp"
 
 namespace nudge {
@@ -86,6 +88,17 @@ TEST_P(FullGames, PlaysTheRecordedTree) {
     EXPECT_EQ(tree.gamesByLength, GetParam().gamesByLength);
     EXPECT_EQ(tree.moves.size(), GetParam().positions);
     EXPECT_EQ(movesDigest(tree.moves), GetParam().digest);
+}
+
+TEST_P(FullGames, StoredFirstGuessIsUpToDate) {
+    // The walks open with the stored guess, so recompute it the way
+    // nudge_precompute does instead of asking a solver.
+    const WordLists& lists = WordLists::builtin();
+    const Word computed =
+        rankBest(lists.guesses(), lists.answers(), *makeStrategy(GetParam().strategy), 0);
+    EXPECT_EQ(computed.text(), GetParam().opener);
+    EXPECT_EQ(lists.firstGuess(GetParam().strategy), computed)
+        << "data/first_guesses.inc is out of date: rerun nudge_precompute";
 }
 
 TEST_P(FullGames, FreshSolversPlayTheSameTree) {

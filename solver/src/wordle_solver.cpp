@@ -77,6 +77,13 @@ std::string WordleSolver::getBestGuess() const {
     if (view_.solved) {
         return view_.candidates.front().text();
     }
+    // The first guess depends only on the lists and the strategy, so it can be
+    // stored ahead of time (plan §5.11); that keeps turn 1 instant.
+    if (veterans_.empty()) {
+        if (const auto stored = lists_.firstGuess(strategy_->name())) {
+            return stored->text();
+        }
+    }
     return rankBest(lists_.guesses(), view_.candidates, *strategy_, view_.triedLetters).text();
 }
 

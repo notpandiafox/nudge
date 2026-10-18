@@ -657,7 +657,8 @@ each strategy**:
 - `WordLists::fromWords(answers, guesses)` builds lists for tests. It sorts
   them, checks every word is 5 letters a–z, removes nothing silently (a
   duplicate is an error), and checks every answer is in the guess list. It
-  has no stored first guesses.
+  stores no first guesses unless a test passes some (a third argument; see
+  "Done in T9").
 - The solver's constructor is
   `WordleSolver(std::unique_ptr<ScoringStrategy>, bool hardMode, const WordLists& = WordLists::builtin())`.
 - On an empty game, `getBestGuess()` returns the stored first guess for the
@@ -1135,6 +1136,38 @@ with a better average than minimax but a worse worst case:
 - Fast tests: the stored first guess is returned on an empty built-in game;
   a tiny list computes its own; the first guess is the same in hard mode.
 - Slow test: recomputing gives the same words as the file.
+
+**Done in T9.** `data/first_guesses.inc` stores `olate` (minimax) and
+`tarse` (entropy), the same openers the T7 and T8 walks measured. An empty
+built-in game now answers at once instead of ranking the whole list (about
+0.4 seconds natively per strategy, measured by the slow test that
+recomputes it). The precompute tool computes both in under a second.
+
+- **`fromWords` takes the first guesses as an optional third argument**, and
+  `builtin()` passes the file's entries through it. So there is one check for
+  all lists: a stored first guess must be a word in the guess list, or the
+  lists are rejected (and `builtin()` stops with its existing error). It also
+  lets a test store a first guess that ranking would never choose, which is
+  the only way to show the stored value is really used: on the real lists,
+  stored and computed are the same word.
+- Stored by the strategy's `name()`, so a strategy without an entry simply
+  computes its first guess, like the tiny test lists do.
+- `nudge_precompute` (in `solver/tools/`, native only) prints the file to
+  standard output: `nudge_precompute > data/first_guesses.inc`. On Windows
+  the redirect writes CRLF line endings; `.gitattributes` (`eol=lf`) turns
+  them back into LF on commit, and the compiler doesn't care.
+- **The up-to-date check can't ask a solver**, because a solver now opens
+  with the stored guess, which would compare the file with itself. The slow
+  test `StoredFirstGuessIsUpToDate` calls `rankBest` directly, the way the
+  tool does, for both strategies.
+- The file started empty, as planned (bootstrapping in §5.11): the built-in
+  test and the slow test failed until the tool had been run.
+- The hard-mode test (`OnTheBuiltinListsInEitherMode`) passes trivially until
+  T10 adds hard mode; it pins the spec's rule that the first guess is the same.
+- Mutation checks, each caught: the stored guess ignored, the stored guess
+  used on every turn, a stored guess not checked against the list, the
+  lookup ignoring the strategy name, and a stale file (caught by a fast test
+  and by the slow test, whose message says to rerun the tool).
 
 ### T10. Hard mode
 

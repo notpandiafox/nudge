@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <vector>
 
+#include "test_printers.hpp"
 #include "test_words.hpp"
 
 namespace nudge {
@@ -52,6 +53,32 @@ TEST(WordListsFromWords, RejectsListsTheSolverCannotUse) {
     EXPECT_FALSE(WordLists::fromWords({"crane", "crane"}, {"crane"}));  // duplicate answer
     EXPECT_FALSE(WordLists::fromWords({"crane", "slate"}, {"crane"}));  // answer not a guess
     EXPECT_FALSE(WordLists::fromWords({}, {"crane"}));                  // no answers at all
+}
+
+TEST(WordListsFirstGuess, IsStoredByStrategyName) {
+    const auto lists = WordLists::fromWords({"crane", "crate"}, {"crane", "crate", "slate"},
+                                            {{"minimax", "Slate"}});
+    ASSERT_TRUE(lists.has_value());
+    EXPECT_EQ(lists->firstGuess("minimax"), w("slate"));
+    EXPECT_EQ(lists->firstGuess("entropy"), std::nullopt);  // not stored: the solver computes it
+}
+
+TEST(WordListsFirstGuess, NoneStoredByDefault) {
+    const auto lists = WordLists::fromWords({"crane"}, {"crane"});
+    ASSERT_TRUE(lists.has_value());
+    EXPECT_EQ(lists->firstGuess("minimax"), std::nullopt);
+}
+
+TEST(WordListsFirstGuess, MustBeAGuessInTheList) {
+    // slate is a word, but not in this guess list; cr4ne isn't a word at all.
+    EXPECT_FALSE(WordLists::fromWords({"crane"}, {"crane"}, {{"minimax", "slate"}}));
+    EXPECT_FALSE(WordLists::fromWords({"crane"}, {"crane"}, {{"minimax", "cr4ne"}}));
+}
+
+TEST(BuiltinWordLists, StoreTheFirstGuessOfEachStrategy) {
+    // The openers the full-game walks measured in T7 and T8 (plan, "Done in T9").
+    EXPECT_EQ(WordLists::builtin().firstGuess("minimax"), w("olate"));
+    EXPECT_EQ(WordLists::builtin().firstGuess("entropy"), w("tarse"));
 }
 
 }  // namespace
