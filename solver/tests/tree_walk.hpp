@@ -1,9 +1,11 @@
 #pragma once
 
+#include <cstdint>
 #include <functional>
 #include <map>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "nudge/text_format.hpp"
@@ -63,6 +65,24 @@ inline void walkFrom(const WordLists& lists, const MakeStrategy& makeStrategy,
             veterans.pop_back();
         }
     }
+}
+
+// A checksum of every move, the same on every platform (64-bit FNV-1a; std::hash
+// differs between standard libraries). Pinning it pins the whole tree, not just its shape.
+inline std::uint64_t movesDigest(const std::map<std::string, std::string>& moves) {
+    std::uint64_t hash = 0xcbf29ce484222325u;
+    const auto add = [&hash](std::string_view text) {
+        for (const char c : text) {
+            hash = (hash ^ static_cast<unsigned char>(c)) * 0x100000001b3u;
+        }
+    };
+    for (const auto& [position, guess] : moves) {
+        add(position);
+        add("=");
+        add(guess);
+        add("\n");
+    }
+    return hash;
 }
 
 inline GameTree walkAllGames(const WordLists& lists, const MakeStrategy& makeStrategy) {

@@ -5,10 +5,10 @@
 #include <algorithm>
 #include <vector>
 
+#include "test_words.hpp"
+
 namespace nudge {
 namespace {
-
-Word w(std::string_view text) { return *Word::parse(text); }
 
 bool contains(const std::vector<Word>& words, std::string_view text) {
     return std::binary_search(words.begin(), words.end(), w(text));

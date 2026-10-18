@@ -1,4 +1,5 @@
 add_library(nudge_solver
+    src/entropy_strategy.cpp
     src/feedback.cpp
     src/minimax_strategy.cpp
     src/ranking.cpp

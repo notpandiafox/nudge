@@ -39,6 +39,9 @@ jobs:
         run: cmake --build build
       - name: Fast tests
         run: ctest --test-dir build -L fast --no-tests=error --output-on-failure
+      # A second compiler must play the same pinned trees (plan, "Done in T8").
+      - name: Slow tests
+        run: ctest --test-dir build -L slow --no-tests=error --output-on-failure
 
   # AddressSanitizer and UBSan catch memory bugs and undefined behavior.
   # MinGW on Windows has neither, so they only run here (plan §9).

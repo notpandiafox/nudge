@@ -2,26 +2,15 @@
 
 #include <gtest/gtest.h>
 
-#include <algorithm>
 #include <numeric>
 #include <vector>
 
 #include "nudge/minimax_strategy.hpp"
 #include "test_printers.hpp"
+#include "test_words.hpp"
 
 namespace nudge {
 namespace {
-
-Word w(std::string_view text) { return *Word::parse(text); }
-
-std::vector<Word> words(std::initializer_list<std::string_view> texts) {
-    std::vector<Word> result;
-    for (const auto text : texts) {
-        result.push_back(w(text));
-    }
-    std::sort(result.begin(), result.end());
-    return result;
-}
 
 std::uint32_t lettersOf(std::string_view text) { return w(text).mask(); }
 

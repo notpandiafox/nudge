@@ -31,6 +31,22 @@ TEST(ParsePattern, ReadsGreenYellowGrayInEitherCase) {
     EXPECT_EQ(parsePattern("gyxxg"), (FeedbackPattern{G, Y, X, X, G}));
 }
 
+TEST(MakeStrategy, MakesEachStrategyByItsName) {
+    for (const std::string_view name : {"minimax", "entropy"}) {
+        const auto strategy = makeStrategy(name);
+        ASSERT_NE(strategy, nullptr) << name;
+        EXPECT_EQ(strategy->name(), name);
+    }
+}
+
+TEST(MakeStrategy, AnyOtherNameMakesNothing) {
+    // Names are exact: no other spelling, case or spacing is guessed at.
+    EXPECT_EQ(makeStrategy("knuth"), nullptr);
+    EXPECT_EQ(makeStrategy("Minimax "), nullptr);
+    EXPECT_EQ(makeStrategy("Entropy"), nullptr);
+    EXPECT_EQ(makeStrategy(""), nullptr);
+}
+
 TEST(ParsePattern, RejectsWrongLengthOrUnknownLetters) {
     EXPECT_FALSE(parsePattern(""));
     EXPECT_FALSE(parsePattern("GYXX"));

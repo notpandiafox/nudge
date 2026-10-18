@@ -2,10 +2,10 @@
 
 #include <gtest/gtest.h>
 
+#include "test_words.hpp"
+
 namespace nudge {
 namespace {
-
-Word w(std::string_view text) { return *Word::parse(text); }
 
 // Three answers that share "abcd", plus two guesses that share no letter with them.
 WordLists tinyLists() {

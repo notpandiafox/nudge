@@ -5,6 +5,7 @@
 #include <memory>
 #include <span>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "nudge/feedback.hpp"
@@ -37,6 +38,7 @@ public:
     const std::vector<VeteranWord>& getVeteranWords() const;
     bool isUsingFallback() const;
     Status setStrategy(std::unique_ptr<ScoringStrategy> strategy);
+    Status setStrategy(std::string_view name);  // "minimax" or "entropy" (makeStrategy)
     void reset();
 
 private:

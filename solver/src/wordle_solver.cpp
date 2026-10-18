@@ -4,6 +4,7 @@
 #include <cassert>
 
 #include "feedback_code.hpp"
+#include "nudge/text_format.hpp"
 #include "ranking.hpp"
 
 namespace nudge {
@@ -92,6 +93,8 @@ Status WordleSolver::setStrategy(std::unique_ptr<ScoringStrategy> strategy) {
     strategy_ = std::move(strategy);
     return Status::Ok;
 }
+
+Status WordleSolver::setStrategy(std::string_view name) { return setStrategy(makeStrategy(name)); }
 
 void WordleSolver::reset() {
     veterans_.clear();

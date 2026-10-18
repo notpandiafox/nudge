@@ -28,6 +28,17 @@ TEST(TreeWalk, PlaysEveryGameOfATinyListByHand) {
               (std::map<std::string, std::string>{{"", "crane"}, {"crane:GGGXG ", "crate"}}));
 }
 
+TEST(TreeWalk, DigestsEveryMove) {
+    // Expected values from an independent FNV-1a in Python, which matches the
+    // published test values (e.g. "foobar" -> 0x85944171f73967e8).
+    EXPECT_EQ(movesDigest({}), 0xcbf29ce484222325u);  // nothing hashed: the FNV offset basis
+    std::map<std::string, std::string> moves = walkAllGames(twoAnswers(), minimax).moves;
+    // Hashes "=crane\ncrane:GGGXG =crate\n": position=guess, one move per line.
+    EXPECT_EQ(movesDigest(moves), 0x37ed8b96991ef816u);
+    moves["crane:GGGXG "] = "slate";  // one different move, same shape
+    EXPECT_NE(movesDigest(moves), 0x37ed8b96991ef816u);
+}
+
 TEST(TreeWalk, StopsAtTheDepthLimit) {
     // This strategy prefers the worst guess: zzzzz, which keeps both answers
     // together forever, so the walk must stop at the limit instead of looping.

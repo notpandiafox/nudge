@@ -1,5 +1,8 @@
 #include "nudge/text_format.hpp"
 
+#include "nudge/entropy_strategy.hpp"
+#include "nudge/minimax_strategy.hpp"
+
 namespace nudge {
 
 std::string_view statusToText(Status status) {
@@ -44,6 +47,16 @@ std::optional<FeedbackPattern> parsePattern(std::string_view text) {
         }
     }
     return pattern;
+}
+
+std::unique_ptr<ScoringStrategy> makeStrategy(std::string_view name) {
+    if (name == "minimax") {
+        return std::make_unique<MinimaxStrategy>();
+    }
+    if (name == "entropy") {
+        return std::make_unique<EntropyStrategy>();
+    }
+    return nullptr;
 }
 
 }  // namespace nudge

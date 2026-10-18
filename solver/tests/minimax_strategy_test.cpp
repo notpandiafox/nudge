@@ -5,11 +5,10 @@
 #include <vector>
 
 #include "ranking.hpp"
+#include "test_words.hpp"
 
 namespace nudge {
 namespace {
-
-Word w(std::string_view text) { return *Word::parse(text); }
 
 // Knuth spec: on a small hand-built set, the worst-case group for several
 // guesses matches values worked out by hand.

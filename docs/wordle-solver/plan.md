@@ -1075,6 +1075,59 @@ case in 5 guesses:
   veteran words and candidates**.
 - Slow tests: the same as T7.
 
+**Done in T8.** Entropy also solves all 2,309 answers within 6 guesses,
+with a better average than minimax but a worse worst case:
+
+| Strategy | Opener | 2 | 3 | 4 | 5 | 6 | Average | Positions |
+|---|---|---|---|---|---|---|---|---|
+| Minimax | `olate` | 62 | 975 | 1,209 | 63 | 0 | 3.551 | 2,480 |
+| Entropy | `tarse` | 61 | 1,257 | 936 | 53 | 2 | 3.428 | 2,470 |
+
+- The two answers that take 6 are *hover* and *poker* (the -over and -oker
+  families). That is expected: minimax minimizes the worst group, while
+  entropy maximizes the average information.
+- The slow suite is one parameterized suite (`Strategies/FullGames.*`), run
+  for both names through `makeStrategy`. Each entropy walk takes about 9
+  seconds natively.
+- **Each tree is now pinned move by move, not just by its shape.** Besides
+  the opener, the distribution and the position count, `PlaysTheRecordedTree`
+  checks `movesDigest`: a 64-bit FNV-1a checksum of every `position=guess`
+  line, the same on every platform (`std::hash` is not). The T8 review
+  pointed out that a different guess deep in the tree can leave the shape
+  unchanged. A fast test checks the digest against an independent Python
+  FNV-1a, and that changing one move with the same shape changes it.
+  Digests: minimax `0xf1e24eb8b6f55487`, entropy `0x17eec0cb3e927250`.
+- **The slow suite also runs in CI's `clang` job,** so two compilers must
+  play the identical trees. Native against WebAssembly comes in T12 (§8.4).
+- **The 1e-9 tolerance matters for real games, not just in theory.** With it
+  set to 0, one entropy move in the real tree changes (one answer goes from 3
+  to 4 guesses, 2,471 positions), and the pinned tree catches it. Widening it
+  to 1e-6, 1e-4 or even 1e-2 changes nothing: in the real games, near-ties are
+  either rounding-sized (about 1e-16) or far apart. The fast test
+  `RoundingDoesNotBreakATie` shows the cause on two hand-built probes: equal
+  groups (3, 1, 1, 1) in a different pattern order add up to scores that
+  differ in the last digit, so without the tolerance the wrong probe wins.
+  The test asserts that last-digit gap itself (`EXPECT_LT`), so a platform
+  that adds them up equal fails loudly instead of quietly no longer testing
+  the tolerance.
+- `makeStrategy` lives in `text_format` with the other name conversions
+  (§5.3). `setStrategy(name)` is one line: `setStrategy(makeStrategy(name))`.
+- With two `setStrategy` overloads, `setStrategy(nullptr)` no longer compiles
+  in C++20 (`nullptr` converts to both a pointer and a `string_view`). That
+  is a compile error, never a wrong result, so the T5 test now passes an
+  empty `std::unique_ptr` instead.
+- A tiny list where minimax and entropy pick different guesses checks that
+  the name really swaps the strategy. The mid-game test plays a clue that
+  removes two of the eight words first, so a switch that reset the
+  candidates would show 8 instead of 6 (the first version used a clue that
+  removed nothing, so it couldn't tell; found in review).
+- The test helpers `w()` and `words()` live once in `tests/test_words.hpp`,
+  instead of a copy in five test files. One copy of `words()` didn't sort
+  its list, while `pickWinner` asserts a sorted candidate list in Debug builds.
+- Mutation checks, each caught: the name ignored, natural log instead of
+  log₂, no weighting by p, empty groups counted, `"entropy"` making minimax,
+  and a name switch that resets the candidates.
+
 ### T9. Precomputed first guesses
 
 - `nudge_precompute`; `data/first_guesses.inc`; `getBestGuess()` returns the

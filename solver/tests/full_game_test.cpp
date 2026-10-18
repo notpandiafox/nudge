@@ -1,29 +1,60 @@
 // Slow tests: every game of the real answer list, as one decision tree (plan §8.2).
 #include <gtest/gtest.h>
 
+#include <cstdint>
 #include <cstdio>
+#include <ostream>
+#include <string>
 
-#include "nudge/minimax_strategy.hpp"
+#include "nudge/text_format.hpp"
 #include "tree_walk.hpp"
 
 namespace nudge {
 namespace {
 
-MakeStrategy minimax() {
-    return [] { return std::make_unique<MinimaxStrategy>(); };
+// The exact tree each strategy played when it was measured (plan, "Done in T7"
+// and "Done in T8"). A change to a strategy, the tie-break or the word lists
+// changes it, and must update these on purpose.
+struct RecordedTree {
+    std::string strategy;
+    std::string opener;
+    std::map<int, int> gamesByLength;
+    std::size_t positions;
+    std::uint64_t
+        digest;  // movesDigest: every move, so a changed guess with the same shape fails too
+};
+
+const RecordedTree kRecorded[] = {
+    {"minimax", "olate", {{2, 62}, {3, 975}, {4, 1'209}, {5, 63}}, 2'480, 0xf1e2'4eb8'b6f5'5487u},
+    {"entropy",
+     "tarse",
+     {{2, 61}, {3, 1'257}, {4, 936}, {5, 53}, {6, 2}},
+     2'470,
+     0x17ee'c0cb'3e92'7250u},
+};
+
+// Test logs show the strategy name instead of the struct's bytes.
+void PrintTo(const RecordedTree& recorded, std::ostream* out) { *out << recorded.strategy; }
+
+MakeStrategy named(const std::string& name) {
+    return [name] { return makeStrategy(name); };
 }
 
-// Walked once and shared, since a walk takes seconds.
-const GameTree& minimaxTree() {
-    static const GameTree tree = walkAllGames(WordLists::builtin(), minimax());
-    return tree;
+// Walked once per strategy and shared, since a walk takes seconds.
+const GameTree& walked(const std::string& name) {
+    static std::map<std::string, GameTree> trees;
+    auto found = trees.find(name);
+    if (found == trees.end()) {
+        found = trees.emplace(name, walkAllGames(WordLists::builtin(), named(name))).first;
+    }
+    return found->second;
 }
 
-// Prints average, worst case and the distribution (Knuth spec acceptance criteria).
-void report(const char* name, const GameTree& tree) {
+// Prints average, worst case and the distribution (strategy specs' acceptance criteria).
+void report(const std::string& name, const GameTree& tree) {
     int games = 0;
     int guesses = 0;
-    std::printf("%s, normal mode, opening with %s:", name, tree.moves.at("").c_str());
+    std::printf("%s, normal mode, opening with %s:", name.c_str(), tree.moves.at("").c_str());
     for (const auto& [length, count] : tree.gamesByLength) {
         std::printf(" %d guesses: %d,", length, count);
         games += count;
@@ -34,9 +65,11 @@ void report(const char* name, const GameTree& tree) {
                 tree.unsolved.size(), tree.moves.size());
 }
 
-TEST(MinimaxFullGames, EveryAnswerIsSolvedWithinSixGuesses) {
-    const GameTree& tree = minimaxTree();
-    report("minimax", tree);
+class FullGames : public testing::TestWithParam<RecordedTree> {};
+
+TEST_P(FullGames, EveryAnswerIsSolvedWithinSixGuesses) {
+    const GameTree& tree = walked(GetParam().strategy);
+    report(GetParam().strategy, tree);
     int games = 0;
     for (const auto& [length, count] : tree.gamesByLength) {
         games += count;
@@ -47,20 +80,23 @@ TEST(MinimaxFullGames, EveryAnswerIsSolvedWithinSixGuesses) {
     EXPECT_EQ(tree.replayFailures, 0);
 }
 
-TEST(MinimaxFullGames, PlaysTheRecordedTree) {
-    // The exact tree T7 measured (plan, "Done in T7"). A change to the strategy,
-    // the tie-break or the word lists changes it, and must update these on purpose.
-    const GameTree& tree = minimaxTree();
-    EXPECT_EQ(tree.moves.at(""), "olate");
-    EXPECT_EQ(tree.gamesByLength, (std::map<int, int>{{2, 62}, {3, 975}, {4, 1'209}, {5, 63}}));
-    EXPECT_EQ(tree.moves.size(), 2'480u);
+TEST_P(FullGames, PlaysTheRecordedTree) {
+    const GameTree& tree = walked(GetParam().strategy);
+    EXPECT_EQ(tree.moves.at(""), GetParam().opener);
+    EXPECT_EQ(tree.gamesByLength, GetParam().gamesByLength);
+    EXPECT_EQ(tree.moves.size(), GetParam().positions);
+    EXPECT_EQ(movesDigest(tree.moves), GetParam().digest);
 }
 
-TEST(MinimaxFullGames, FreshSolversPlayTheSameTree) {
+TEST_P(FullGames, FreshSolversPlayTheSameTree) {
     // Shared spec: the same input always gives the same guess. Every position is
     // computed again by new solvers and compared with the first walk.
-    EXPECT_EQ(walkAllGames(WordLists::builtin(), minimax()).moves, minimaxTree().moves);
+    const std::string& name = GetParam().strategy;
+    EXPECT_EQ(walkAllGames(WordLists::builtin(), named(name)).moves, walked(name).moves);
 }
+
+INSTANTIATE_TEST_SUITE_P(Strategies, FullGames, testing::ValuesIn(kRecorded),
+                         [](const auto& test) { return test.param.strategy; });
 
 }  // namespace
 }  // namespace nudge

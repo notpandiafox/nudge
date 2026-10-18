@@ -2,6 +2,7 @@ include(GoogleTest)
 
 # Fast tests: run after every change; coverage is measured on these alone.
 add_executable(nudge_fast_tests
+    entropy_strategy_test.cpp
     feedback_test.cpp
     minimax_strategy_test.cpp
     ranking_test.cpp

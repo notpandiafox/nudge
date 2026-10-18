@@ -125,9 +125,48 @@ TEST(WordleSolver, SameWordTwice) {
 TEST(WordleSolver, EmptyStrategyIsRejectedAndChangesNothing) {
     WordleSolver solver = tinyGame();
     ASSERT_EQ(solver.addFeedbackPattern("slate", pattern("XXGXG")), Status::Ok);
-    EXPECT_EQ(solver.setStrategy(nullptr), Status::UnknownStrategy);
+    EXPECT_EQ(solver.setStrategy(std::unique_ptr<ScoringStrategy>{}), Status::UnknownStrategy);
     EXPECT_EQ(solver.setStrategy(std::make_unique<FixedStrategy>()), Status::Ok);
     EXPECT_EQ(solver.getVeteranWords().size(), 1u);
+    EXPECT_EQ(solver.getRemainingCount(), 1u);
+}
+
+// Eight -lls words: b or f, then a, e, i or o. The probe aeoxx splits them into
+// four pairs by the vowel (worst group 2, 2 bits); bxaex splits off b from f as
+// well, except ?ills from ?olls (groups 1, 1, 2, 1, 1, 2: also worst 2, but 2.5
+// bits). Minimax ties and takes aeoxx alphabetically; entropy takes bxaex.
+// Every -lls word scores worse for both (worst group 3, 1.81 bits).
+WordleSolver vowelGame() {
+    static const WordLists lists = *WordLists::fromWords(
+        {"balls", "bells", "bills", "bolls", "falls", "fells", "fills", "folls"},
+        {"aeoxx", "balls", "bells", "bills", "bolls", "bxaex", "falls", "fells", "fills", "folls"});
+    return WordleSolver(std::make_unique<MinimaxStrategy>(), false, lists);
+}
+
+TEST(WordleSolver, StrategyIsChosenByItsExactName) {
+    WordleSolver solver = vowelGame();
+    EXPECT_EQ(solver.setStrategy("knuth"), Status::UnknownStrategy);
+    EXPECT_EQ(solver.setStrategy("Minimax "), Status::UnknownStrategy);
+    EXPECT_EQ(solver.getBestGuess(), "aeoxx");  // still minimax
+    EXPECT_EQ(solver.setStrategy("entropy"), Status::Ok);
+    EXPECT_EQ(solver.getBestGuess(), "bxaex");
+    EXPECT_EQ(solver.setStrategy("minimax"), Status::Ok);
+    EXPECT_EQ(solver.getBestGuess(), "aeoxx");
+}
+
+TEST(WordleSolver, SwitchingStrategyMidGameKeepsTheGame) {
+    WordleSolver solver = vowelGame();
+    // No o anywhere: bolls and folls are out, 6 words remain.
+    ASSERT_EQ(solver.addFeedbackPattern("xxxxo", pattern("XXXXX")), Status::Ok);
+    ASSERT_EQ(solver.getRemainingCount(), 6u);
+    ASSERT_EQ(solver.setStrategy("entropy"), Status::Ok);
+    ASSERT_EQ(solver.getVeteranWords().size(), 1u);
+    EXPECT_EQ(solver.getVeteranWords()[0].word, "xxxxo");
+    EXPECT_EQ(solver.getRemainingCount(), 6u);
+    EXPECT_FALSE(solver.isUsingFallback());
+    EXPECT_EQ(solver.getBestGuess(), "bxaex");
+    // The game goes on from where it was: bxaex's colors for bells leave only bells.
+    ASSERT_EQ(solver.addFeedbackPattern("bxaex", pattern("GXXYX")), Status::Ok);
     EXPECT_EQ(solver.getRemainingCount(), 1u);
 }
 
