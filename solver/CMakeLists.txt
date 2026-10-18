@@ -1,5 +1,6 @@
 add_library(nudge_solver
     src/feedback.cpp
+    src/minimax_strategy.cpp
     src/ranking.cpp
     src/text_format.cpp
     src/word.cpp

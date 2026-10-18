@@ -19,7 +19,10 @@ jobs:
       - name: Build
         run: cmake --build build
       - name: Fast tests
-        run: ctest --test-dir build -L fast --output-on-failure
+        run: ctest --test-dir build -L fast --no-tests=error --output-on-failure
+      # Every game of the real lists; --verbose prints the guess distribution.
+      - name: Slow tests
+        run: ctest --test-dir build -L slow --no-tests=error --output-on-failure --verbose
 
   clang:
     runs-on: ubuntu-24.04
@@ -35,7 +38,7 @@ jobs:
       - name: Build
         run: cmake --build build
       - name: Fast tests
-        run: ctest --test-dir build -L fast --output-on-failure
+        run: ctest --test-dir build -L fast --no-tests=error --output-on-failure
 
   # AddressSanitizer and UBSan catch memory bugs and undefined behavior.
   # MinGW on Windows has neither, so they only run here (plan §9).
@@ -55,7 +58,7 @@ jobs:
       - name: Build
         run: cmake --build build
       - name: Fast tests
-        run: ctest --test-dir build -L fast --output-on-failure
+        run: ctest --test-dir build -L fast --no-tests=error --output-on-failure
 
   lint:
     runs-on: ubuntu-24.04
@@ -127,7 +130,7 @@ jobs:
       - name: Build
         run: cmake --build build-cov
       - name: Fast tests
-        run: ctest --test-dir build-cov -L fast --output-on-failure
+        run: ctest --test-dir build-cov -L fast --no-tests=error --output-on-failure
       - name: Coverage gate (100% lines and functions)
         run: >
           mkdir -p coverage &&

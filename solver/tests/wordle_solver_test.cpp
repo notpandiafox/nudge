@@ -2,27 +2,20 @@
 
 #include <gtest/gtest.h>
 
-#include <algorithm>
 #include <memory>
 
+#include "nudge/minimax_strategy.hpp"
 #include "nudge/text_format.hpp"
 #include "test_printers.hpp"
 
 namespace nudge {
 namespace {
 
-// Stands in for minimax and entropy until T7; T5 never asks it to score.
+// Scores every guess the same: these tests are about the game state, and a
+// tie makes the tie-break pick the guess, which keeps the expected words simple.
 struct FixedStrategy : ScoringStrategy {
     double score(const BucketCounts& /*counts*/, std::size_t /*total*/) const override { return 0; }
     std::string_view name() const override { return "fixed"; }
-};
-
-// Shaped like minimax: smaller worst group is better.
-struct WorstBucketStrategy : ScoringStrategy {
-    double score(const BucketCounts& counts, std::size_t /*total*/) const override {
-        return -static_cast<double>(*std::max_element(counts.begin(), counts.end()));
-    }
-    std::string_view name() const override { return "worst-bucket"; }
 };
 
 FeedbackPattern pattern(std::string_view text) { return *parsePattern(text); }
@@ -163,7 +156,7 @@ TEST(WordleSolverBestGuess, SameInputGivesTheSameGuessOnFreshSolvers) {
         {"bills", "fills", "hills", "kills", "mills"},
         {"aaaaa", "bills", "fhkma", "fhkmx", "fills", "hills", "kills", "mills"});
     for (int run = 0; run < 10; ++run) {
-        WordleSolver solver(std::make_unique<WorstBucketStrategy>(), false, lists);
+        WordleSolver solver(std::make_unique<MinimaxStrategy>(), false, lists);
         ASSERT_EQ(solver.addFeedbackPattern("aaaaa", pattern("XXXXX")), Status::Ok);
         EXPECT_EQ(solver.getBestGuess(), "fhkmx") << "run " << run;
     }
@@ -176,7 +169,7 @@ TEST(WordleSolverBestGuess, UsesTheLettersAlreadyTried) {
     static const WordLists lists = *WordLists::fromWords(
         {"bills", "fills", "hills", "kills", "mills"},
         {"aaaaa", "bills", "fhkma", "fhkmx", "fills", "hills", "kills", "mills"});
-    WordleSolver solver(std::make_unique<WorstBucketStrategy>(), false, lists);
+    WordleSolver solver(std::make_unique<MinimaxStrategy>(), false, lists);
     ASSERT_EQ(solver.addFeedbackPattern("aaaaa", pattern("XXXXX")), Status::Ok);
     // a is tried now: fhkmx has 5 new letters, fhkma only 4. Ignoring tried
     // letters would let rule 3 pick fhkma.

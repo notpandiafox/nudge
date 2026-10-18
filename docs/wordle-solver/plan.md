@@ -1032,6 +1032,40 @@ problem entirely.
 **Done when:** every answer is solved within 6 guesses. If any isn't, stop:
 that's a spec must-have failing, and the fix is your decision (risk R1).
 
+**Done in T7: R1 is answered.** Minimax solves all 2,309 answers, the worst
+case in 5 guesses:
+
+| Guesses | 2 | 3 | 4 | 5 | Average |
+|---|---|---|---|---|---|
+| Answers | 62 | 975 | 1,209 | 63 | 3.551 |
+
+- It opens with `olate`. The tree has 2,480 positions; at every one, the
+  solver's candidate *count* matched the independent reference feedback and
+  the solver was not in fallback mode (a count check, not word by word: the
+  solver exposes no candidate list), and a second walk with all-new solvers
+  played the identical tree. Each walk takes about 5 to 7 seconds natively;
+  the slow suite runs in CI's `gcc` job.
+- **The exact tree is pinned** (`PlaysTheRecordedTree`): the opener, the
+  distribution above and the 2,480 positions. The T7 review showed that
+  without it, rule 2 or 3 reversed, tried letters ignored, or even a different
+  strategy all passed the slow suite, since they still solve everything within
+  6. With it, all three of those mutations fail it. A deliberate change to
+  the strategy, tie-break or word lists has to update these values.
+- **The cross-check's detectors are tested** (fast tests that make each one
+  fire), so "0 mismatches, 0 replay failures" can't silently become a no-op.
+  Deleting either one fails a test.
+- CI test steps use `--no-tests=error`, so a step that finds no tests fails
+  instead of passing.
+- **Mutation checks on the slow test:** a constant score (every guess ties)
+  made 34 answers need 7 to 10 guesses, and removing the feedback step that
+  uses up a letter's copy gave 518 positions where solver and reference
+  disagreed, plus 174 unsolved answers. Both fail the test. The second one is
+  why the walk uses the reference feedback: with the solver's own, solver and
+  simulation would share the bug and agree.
+- The tree walk itself has fast tests on a two-answer list (worked out by
+  hand) and on a strategy that never makes progress (the depth limit stops it).
+- `MinimaxStrategy` replaced the two `WorstBucketStrategy` test copies.
+
 ### T8. Entropy strategy and strategy names
 
 - `EntropyStrategy`; `makeStrategy(name)` and `setStrategy(name)`.
@@ -1152,9 +1186,13 @@ walk(veteran words, possible answers):
 
 ### 8.3 Determinism
 
-Determinism tests build **fresh solvers**. They ask each of 10 new solvers for
-the same positions and compare the answers to each other and to the stored
-tree. Draft 1 would have answered from a cache, which proves nothing.
+Determinism tests build **fresh solvers**; draft 1 would have answered from a
+cache, which proves nothing. As built: a fast test asks 10 new solvers for the
+same position on a tiny list (T6), and the slow suite walks the whole real
+tree a second time with new solvers at every position and compares the two
+(T7). Ten full walks would cost about a minute for little extra. Both run in
+one process, so a different-process check comes from §8.4 (native versus
+WebAssembly) and T9's stored first guess.
 
 ### 8.4 Native and WebAssembly agree
 

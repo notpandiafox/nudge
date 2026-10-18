@@ -6,6 +6,7 @@
 #include <numeric>
 #include <vector>
 
+#include "nudge/minimax_strategy.hpp"
 #include "test_printers.hpp"
 
 namespace nudge {
@@ -23,14 +24,6 @@ std::vector<Word> words(std::initializer_list<std::string_view> texts) {
 }
 
 std::uint32_t lettersOf(std::string_view text) { return w(text).mask(); }
-
-// Shaped like minimax (T7): a smaller worst group is better.
-struct WorstBucketStrategy : ScoringStrategy {
-    double score(const BucketCounts& counts, std::size_t /*total*/) const override {
-        return -static_cast<double>(*std::max_element(counts.begin(), counts.end()));
-    }
-    std::string_view name() const override { return "worst-bucket"; }
-};
 
 TEST(Bucketize, CountsHowManyCandidatesGiveEachPattern) {
     const std::vector<Word> candidates{w("stare"), w("stale"), w("stake"), w("crane")};
@@ -106,12 +99,12 @@ TEST(RankBest, PicksANonCandidateWhenItSplitsBetter) {
     // fhkmx tests f, h, k and m at once and separates all five.
     const std::vector<Word> pool = words({"bills", "fhkmx", "fills", "hills", "kills", "mills"});
     const std::vector<Word> candidates = words({"bills", "fills", "hills", "kills", "mills"});
-    EXPECT_EQ(rankBest(pool, candidates, WorstBucketStrategy{}, 0), w("fhkmx"));
+    EXPECT_EQ(rankBest(pool, candidates, MinimaxStrategy{}, 0), w("fhkmx"));
 }
 
 TEST(RankBest, OneCandidateLeftIsTheAnswer) {
     const std::vector<Word> pool = words({"crane", "slate"});
-    EXPECT_EQ(rankBest(pool, words({"slate"}), WorstBucketStrategy{}, 0), w("slate"));
+    EXPECT_EQ(rankBest(pool, words({"slate"}), MinimaxStrategy{}, 0), w("slate"));
 }
 
 }  // namespace

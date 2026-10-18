@@ -11,7 +11,7 @@ namespace nudge {
 // would produce that pattern for a given guess.
 using BucketCounts = std::array<std::uint32_t, 243>;
 
-// How a strategy rates a guess. MinimaxStrategy (T7) and EntropyStrategy (T8)
+// How a strategy rates a guess. MinimaxStrategy and EntropyStrategy (T8)
 // implement this; the solver builds the bucket counts (plan §5.6).
 class ScoringStrategy {
 public:
