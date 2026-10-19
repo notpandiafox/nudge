@@ -1247,6 +1247,43 @@ always within 6, as the spec expected:
 once in the slow tests and once in the benchmark. Sharing the walk means one
 implementation and no duplicated work in CI.
 
+**Done in T11: the budget is met natively, with the real strategies.** The
+slowest hint is entropy's worst fallback, 335 ms (best of 5, the developer's
+Windows laptop, MinGW GCC 12, -O3):
+
+| Worst case (§5.9) | Minimax | Entropy |
+|---|---|---|
+| Worst opener (`xviii`, 1,549 candidates) | 247 ms | 275 ms |
+| Worst fallback (`sughs`, 2,398 candidates) | 317 ms | 335 ms |
+| Same in WebAssembly (Node), warm | 329 / 436 ms | 335 / 442 ms |
+| Worst fallback in WebAssembly, cold | | 457 ms |
+
+- **Real games are far below the worst cases.** Over every game of both
+  strategies in both modes, the slowest hint actually played is 39 ms
+  (entropy, turn 2, 226 candidates). The worst cases are positions the
+  solver's own openers never reach; they stay as the budget's test because a
+  player can open with anything. Turn 1 is 0 ms (the stored first guess),
+  and hard-mode turns get cheaper as the pool shrinks (to 15–76 guesses by
+  turn 6).
+- **WebAssembly is the tight one:** entropy's worst fallback has about 9% to
+  spare cold (457 ms). T12 measures it again in its Node tests; Firefox
+  (§5.9) is the extension's check. If it goes over, the first fix is still
+  the internal one in §5.9.
+- `nudge_bench` replaces the T4 spike (`nudge_spike` is deleted): no
+  arguments times the two worst cases with both strategies; `--games
+  [report.json]` also plays all four trees and prints, per turn, the
+  positions, the largest candidate count, the largest pool, and the mean and
+  slowest `getBestGuess` time; `<strategy> <opener> <pattern>
+  answers|guesses` times one cold hint. It exits with 1 above twice the
+  budget, which is CI's loose gate (§8.5).
+- The numbers per turn come from the tree walk itself (`GameTree::turns`),
+  so the slow tests and the benchmark share one walk; fast tests check the
+  counts on the hand-worked tiny trees, in both modes.
+- CI: the `gcc` job runs the benchmark after the slow tests and attaches
+  `bench-report.json` to the run (the worst cases, then every tree with its
+  per-turn numbers); the `wasm` job runs the worst cases warm
+  and cold, for both strategies.
+
 ### T12. WebAssembly build
 
 - `bindings.cpp` (registration only), the build flags, and Node tests:

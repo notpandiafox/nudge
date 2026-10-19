@@ -26,6 +26,23 @@ TEST(TreeWalk, PlaysEveryGameOfATinyListByHand) {
     EXPECT_EQ(tree.replayFailures, 0);
     EXPECT_EQ(tree.moves,
               (std::map<std::string, std::string>{{"", "crane"}, {"crane:GGGXG ", "crate"}}));
+    EXPECT_DOUBLE_EQ(averageGuesses(tree), 1.5);
+    EXPECT_EQ(worstGuesses(tree), 2);
+}
+
+TEST(TreeWalk, RecordsTheWorkOfEveryTurn) {
+    // Turn 1: one position, both answers possible, all 3 guesses in the pool.
+    // Turn 2: one position (after crane:GGGXG), only crate left.
+    const GameTree tree = walkAllGames(twoAnswers(), minimax);
+    ASSERT_EQ(tree.turns.size(), 2u);
+    for (const auto& [turn, candidates] : {std::pair{1, 2u}, std::pair{2, 1u}}) {
+        const TurnStats& stats = tree.turns.at(turn);
+        EXPECT_EQ(stats.positions, 1) << "turn " << turn;
+        EXPECT_EQ(stats.maxCandidates, candidates) << "turn " << turn;
+        EXPECT_EQ(stats.maxPool, 3u) << "turn " << turn;
+        EXPECT_GE(stats.maxMs, 0.0) << "turn " << turn;
+        EXPECT_DOUBLE_EQ(stats.totalMs, stats.maxMs) << "turn " << turn;  // one position each
+    }
 }
 
 TEST(TreeWalk, DigestsEveryMove) {
@@ -53,6 +70,10 @@ TEST(TreeWalk, PlaysHardModeWhenAsked) {
     EXPECT_EQ(normal.hardModeViolations, 1);
     EXPECT_EQ(hard.moves.at("bills:XGGGG "), "fills");
     EXPECT_EQ(hard.hardModeViolations, 0);
+    // The pool is what each mode may guess: all 6 words, or only the 5 ?ills words.
+    EXPECT_EQ(normal.turns.at(2).maxPool, 6u);
+    EXPECT_EQ(hard.turns.at(2).maxPool, 5u);
+    EXPECT_EQ(hard.turns.at(2).maxCandidates, 4u);
 }
 
 TEST(TreeWalk, StopsAtTheDepthLimit) {

@@ -84,18 +84,13 @@ const GameTree& walked(const RecordedTree& recorded) {
 
 // Prints average, worst case and the distribution (strategy specs' acceptance criteria).
 void report(const RecordedTree& recorded, const GameTree& tree) {
-    int games = 0;
-    int guesses = 0;
     std::printf("%s, %s mode, opening with %s:", recorded.strategy.c_str(),
                 recorded.hardMode ? "hard" : "normal", tree.moves.at("").c_str());
     for (const auto& [length, count] : tree.gamesByLength) {
         std::printf(" %d guesses: %d,", length, count);
-        games += count;
-        guesses += length * count;
     }
-    std::printf(" average %.4f, worst %d, unsolved %zu, positions %zu\n",
-                static_cast<double>(guesses) / games, tree.gamesByLength.rbegin()->first,
-                tree.unsolved.size(), tree.moves.size());
+    std::printf(" average %.4f, worst %d, unsolved %zu, positions %zu\n", averageGuesses(tree),
+                worstGuesses(tree), tree.unsolved.size(), tree.moves.size());
 }
 
 class FullGames : public testing::TestWithParam<RecordedTree> {};

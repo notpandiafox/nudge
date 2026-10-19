@@ -1,5 +1,7 @@
 #pragma once
 
+#include <algorithm>
+#include <chrono>
 #include <cstdint>
 #include <functional>
 #include <map>
@@ -9,12 +11,23 @@
 #include <utility>
 #include <vector>
 
+#include "hard_mode.hpp"
 #include "nudge/text_format.hpp"
 #include "nudge/wordle_solver.hpp"
 #include "reference/simple_feedback.hpp"
 #include "reference/simple_hard_mode.hpp"
 
 namespace nudge {
+
+// The work of one turn across every game (turn 1 = the first guess), for the
+// benchmark (T11): how big the hint was and how long getBestGuess took.
+struct TurnStats {
+    int positions = 0;              // positions at this turn, each a hint
+    std::size_t maxCandidates = 0;  // the most candidates any of them had
+    std::size_t maxPool = 0;        // the most guesses any of them could choose from
+    double totalMs = 0;             // getBestGuess time, all positions
+    double maxMs = 0;               // getBestGuess time, the slowest position
+};
 
 // Every game at once, played as a decision tree (plan §8.2). The solver is
 // deterministic, so games that got the same colors so far share the next
@@ -30,6 +43,7 @@ struct GameTree {
     // Moves hard mode forbids, by the independent rule (plan §8.1). Counted in every
     // walk, so a normal-mode walk shows the check can fire; must be 0 in hard mode.
     int hardModeViolations = 0;
+    std::map<int, TurnStats> turns;  // turn number -> its work
 };
 
 // Pattern text as the reference checkers read it, e.g. "GYXXG".
@@ -59,8 +73,25 @@ inline void walkFrom(const WordLists& lists, const MakeStrategy& makeStrategy,
     if (solver.getRemainingCount() != answers.size() || solver.isUsingFallback()) {
         ++tree.countMismatches;
     }
+    const auto start = std::chrono::steady_clock::now();
     const std::string guess = solver.getBestGuess();
+    const std::chrono::duration<double, std::milli> took = std::chrono::steady_clock::now() - start;
     tree.moves[position] = guess;
+
+    const int guessesSoFar = static_cast<int>(veterans.size()) + 1;
+    TurnStats& stats = tree.turns[guessesSoFar];
+    ++stats.positions;
+    stats.maxCandidates = std::max(stats.maxCandidates, solver.getRemainingCount());
+    std::size_t pool = lists.guesses().size();
+    if (hardMode) {
+        const HardModeConstraints constraints = hardModeConstraints(veterans);
+        pool = static_cast<std::size_t>(
+            std::count_if(lists.guesses().begin(), lists.guesses().end(),
+                          [&](const Word& word) { return isHardModeLegal(word, constraints); }));
+    }
+    stats.maxPool = std::max(stats.maxPool, pool);
+    stats.totalMs += took.count();
+    stats.maxMs = std::max(stats.maxMs, took.count());
     std::vector<std::pair<std::string, std::string>> history;
     for (const VeteranWord& veteran : veterans) {
         history.emplace_back(veteran.word, patternText(veteran.pattern));
@@ -73,7 +104,6 @@ inline void walkFrom(const WordLists& lists, const MakeStrategy& makeStrategy,
     for (const std::string& answer : answers) {
         groups[reference::simpleFeedback(guess, answer)].push_back(answer);
     }
-    const int guessesSoFar = static_cast<int>(veterans.size()) + 1;
     for (const auto& [pattern, group] : groups) {
         if (pattern == "GGGGG") {
             ++tree.gamesByLength[guessesSoFar];
@@ -104,6 +134,22 @@ inline std::uint64_t movesDigest(const std::map<std::string, std::string>& moves
         add("\n");
     }
     return hash;
+}
+
+// Average guesses over all solved games; 0 if none was solved.
+inline double averageGuesses(const GameTree& tree) {
+    int games = 0;
+    int guesses = 0;
+    for (const auto& [length, count] : tree.gamesByLength) {
+        games += count;
+        guesses += length * count;
+    }
+    return games == 0 ? 0 : static_cast<double>(guesses) / games;
+}
+
+// The most guesses any solved game needed; 0 if none was solved.
+inline int worstGuesses(const GameTree& tree) {
+    return tree.gamesByLength.empty() ? 0 : tree.gamesByLength.rbegin()->first;
 }
 
 inline GameTree walkAllGames(const WordLists& lists, const MakeStrategy& makeStrategy,

@@ -23,6 +23,16 @@ jobs:
       # Every game of the real lists; --verbose prints the guess distribution.
       - name: Slow tests
         run: ctest --test-dir build -L slow --no-tests=error --output-on-failure --verbose
+      # Times are reported, and only fail above 2x the 500 ms budget: shared CI
+      # machines vary too much for the budget itself (plan §8.5).
+      - name: Benchmark
+        run: ./build/solver/bench/nudge_bench --games bench-report.json
+      - name: Upload benchmark report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: bench-report
+          path: bench-report.json
 
   clang:
     runs-on: ubuntu-24.04
@@ -81,8 +91,8 @@ jobs:
       - name: clang-tidy
         run: clang-tidy-18 -p build $(git ls-files 'solver/src/*.cpp')
 
-  # Builds the solver as WebAssembly and runs the T4 speed check under Node.
-  # Times are reported, not enforced: shared CI machines vary too much (plan §8.5).
+  # Builds the solver as WebAssembly and runs the benchmark's worst cases under
+  # Node. Like the native benchmark, it only fails above 2x the budget (plan §8.5).
   wasm:
     runs-on: ubuntu-24.04
     steps:
@@ -96,12 +106,14 @@ jobs:
         run: emcmake cmake -S . -B build-wasm -G Ninja -DCMAKE_BUILD_TYPE=Release -DNUDGE_WARNINGS_AS_ERRORS=ON
       - name: Build
         run: cmake --build build-wasm
-      - name: Speed check (warm, finds the worst cases)
-        run: node build-wasm/solver/bench/nudge_spike.js
-      - name: Speed check (cold, one hint per fresh process)
+      - name: Benchmark worst cases (warm, best of 5)
+        run: node build-wasm/solver/bench/nudge_bench.js
+      - name: Benchmark worst cases (cold, one hint per fresh process)
         run: |
-          node build-wasm/solver/bench/nudge_spike.js xviii 0 answers
-          node build-wasm/solver/bench/nudge_spike.js sughs 162 guesses
+          for strategy in minimax entropy; do
+            node build-wasm/solver/bench/nudge_bench.js $strategy xviii 0 answers
+            node build-wasm/solver/bench/nudge_bench.js $strategy sughs 162 guesses
+          done
 
   python:
     runs-on: ubuntu-24.04

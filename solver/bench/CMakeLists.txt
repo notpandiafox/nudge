@@ -1,5 +1,6 @@
-# T4 speed check; built natively and with Emscripten (plan §5.9).
-add_executable(nudge_spike nudge_spike.cpp)
-target_include_directories(nudge_spike PRIVATE ../src)
-target_link_libraries(nudge_spike PRIVATE nudge_solver)
-nudge_compile_options(nudge_spike)
+# The benchmark (plan T11); built natively and with Emscripten. It plays games
+# with the same tree walk as the slow tests (tests/tree_walk.hpp).
+add_executable(nudge_bench nudge_bench.cpp)
+target_include_directories(nudge_bench PRIVATE ../src ../tests)
+target_link_libraries(nudge_bench PRIVATE nudge_solver)
+nudge_compile_options(nudge_bench)
