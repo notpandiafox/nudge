@@ -148,11 +148,11 @@ nudge/
 │   │   ├── word.cpp                Word type: checks and converts input words
 │   │   ├── text_format.cpp         pattern text, status text, strategy names
 │   │   ├── feedback.cpp
-│   │   ├── game_view.cpp           recomputes candidates, pool, fallback
-│   │   ├── ranking.cpp             scoring loop, shortcuts, tie-break
+│   │   ├── hard_mode.cpp           rule B: constraints from the veteran words, legality check
+│   │   ├── ranking.cpp             scoring loop, tie-break
 │   │   ├── minimax_strategy.cpp, entropy_strategy.cpp
 │   │   ├── word_lists.cpp          compiles in data/*.inc
-│   │   └── wordle_solver.cpp
+│   │   └── wordle_solver.cpp       the game state (derive: candidates, fallback)
 │   ├── tests/
 │   │   ├── reference/              independent checkers: simple feedback, simple hard-mode rule
 │   │   ├── tree_walk.hpp           plays every game as a decision tree
@@ -410,7 +410,7 @@ How each function then works:
 | `addFeedbackPattern(word, pattern)` | Check input (§5.3). If the pattern is all green: add the word, the game is solved, return `Ok` (§5.14). Otherwise: build the new veteran list, `derive` it, and if there are no candidates return `ImpossibleState` and throw the new list away. Otherwise keep the new list and its view. |
 | `getBestGuess()` | Solved: the winning word. No veteran words: the first guess (§5.11). Otherwise: rank the guess pool (§5.6–5.8). |
 | `setStrategy(...)` | Validate (§5.3), swap the strategy. Game state doesn't change. |
-| `setHardMode(on)` | Set the flag, `derive` again. |
+| `setHardMode(on)` | Set the flag. Nothing else changes: the hard-mode pool is filtered when a hint is asked for (§5.12). |
 | `reset()` | Clear the veteran words, `derive` again. Keeps the strategy and the hard-mode setting (see §11). |
 
 *Why recompute instead of updating piece by piece:* in draft 1, each function
@@ -702,14 +702,21 @@ forgotten.
   - every letter appears at least as many times as it was lit up (Green or
     Yellow) in any one earlier guess;
   - Yellow letters may be anywhere; Gray tiles add no requirement.
-- **The constraints are computed once per game state**, in `derive`: a list of
-  fixed positions, and a 26-entry table of minimum counts (for each letter,
-  the highest Green-plus-Yellow count from any one veteran word). Checking a
-  guess is then five position checks and a count comparison.
-- `derive` builds the pool by running the rule on every guess-list word.
-- **The pool is never empty while candidates exist:** a candidate fits all the
-  feedback, so it has every Green letter in place and at least every copy that
-  was lit up. It always passes the rule.
+- **The constraints come from the veteran words** (`hardModeConstraints`): a
+  list of fixed positions, and a 26-entry table of minimum counts (for each
+  letter, the highest Green-plus-Yellow count from any one veteran word).
+  Checking a guess is then five position checks and a count comparison.
+- **The pool is filtered when a hard-mode hint is asked for**, by running the
+  rule on every guess-list word. Nothing about hard mode is stored in the game
+  state except the flag, so `derive` doesn't depend on the mode, and
+  `setHardMode` can't leave a stale pool behind. One pass over 14,855 words is
+  small next to ranking them. (T10 first stored the pool in the view; the T10
+  review replaced that.)
+- **The pool is never empty,** which `getBestGuess` asserts: there is always a
+  candidate (`addFeedbackPattern` keeps no state without one), every candidate
+  is a guess (`fromWords` checks answers are guesses; fallback takes them from
+  the guess list), and a candidate fits all the feedback, so it has every
+  Green letter in place and at least every copy that was lit up.
 
 *Why rule B (counted letters) instead of "each letter at least once":* it's at
 least as strict as whatever NYT does. If NYT only checks one copy, the solver
@@ -1183,6 +1190,47 @@ recomputes it). The precompute tool computes both in under a second.
   allowed according to the **simple** checker; the number of games over 6
   guesses is recorded (not required to be zero, per the spec).
 
+**Done in T10.** Hard mode solves every answer for both strategies, but not
+always within 6, as the spec expected:
+
+| Strategy, mode | Opener | 2 | 3 | 4 | 5 | 6 | 7 | Average | Positions |
+|---|---|---|---|---|---|---|---|---|---|
+| Minimax, hard | `olate` | 87 | 905 | 1,082 | 206 | 25 | 4 | 3.649 | 2,392 |
+| Entropy, hard | `tarse` | 116 | 1,050 | 973 | 133 | 31 | 6 | 3.537 | 2,385 |
+
+- The answers that take 7 are the classic hard-mode traps, families that
+  differ in one letter: minimax *shave, tight, hatch, mound*; entropy
+  *mound, willy, grown, poker, goner, catch*. Recorded, not fixed: the spec
+  allows it, and only allowed words can be guessed. Whether to do something
+  about it is a later decision.
+- The rule is in `src/hard_mode.{hpp,cpp}`: `hardModeConstraints(veterans)`
+  (the Green letter fixed at each position, and the minimum copies of each
+  letter: the highest count from any one guess, never the sum) and
+  `isHardModeLegal`. `getBestGuess` filters the guess list with them only in
+  hard mode (§5.12); normal mode ranks the guess list directly.
+- `tests/reference/simple_hard_mode.hpp` writes rule B another way: for each
+  earlier guess, cross every lit letter out of a copy of the new guess. A
+  fast test compares the two on every word in the guess list after six
+  histories with repeated letters, and every spec example is a hand test.
+- The slow suite now has 4 trees (2 strategies × 2 modes), each pinned with
+  its digest; the exact numbers live in `kRecorded` in `full_game_test.cpp`,
+  the table above is a copy for reading. Hard-mode walks are much faster than
+  normal ones (the pools are small). The walk checks every move with the
+  simple rule as it goes (`GameTree::hardModeViolations`, which must be 0 in
+  hard mode); a normal-mode walk on a tiny list shows the check can fire.
+- `StoredFirstGuess.IsUpToDate` checks the file once per strategy, since the
+  first guess is the same in hard mode.
+- `EveryAnswerIsSolvedWithinSixGuesses` is now `EveryAnswerIsSolved`: within
+  6 is still required in normal mode, and it now also checks that no answer
+  is left unsolved at the depth limit.
+- Mutation checks, each caught: Greens ignored, counts summed across
+  guesses, Yellows not counted, NYT's looser one-copy rule, the hard pool not
+  used, the constructor ignoring hard mode, `setHardMode` unable to turn it
+  on, `reset()` turning it off, the violation check disabled, the walk
+  ignoring hard mode. The `reset()` one was found by the T10 review: before
+  T10 the flag wasn't stored, so the spec's "reset keeps the hard-mode
+  setting" couldn't be tested; now `ResetKeepsHardModeOn` checks it.
+
 ### T11. Benchmark
 
 - `nudge_bench`, built on the same tree walk as the slow tests. For each
@@ -1507,7 +1555,7 @@ Every acceptance criterion from the specs, and the task that proves it.
 | `ImpossibleState` leaves count, veteran words and fallback unchanged | T5 |
 | All-green for a word in neither list returns `Ok`, then that word | T5, T6 |
 | After the game is solved, `addFeedbackPattern` returns `GameOver` | T5 |
-| `reset()` clears the game, keeps strategy and hard mode | T5 |
+| `reset()` clears the game, keeps strategy and hard mode | T5, T10 (hard mode) |
 | `"CRANE"`, `"Crane"`, `"crane"` all stored as `crane` | T2, T5 |
 | `setStrategy`: empty pointer or unknown name → `UnknownStrategy`; known names → `Ok` | T5, T8 |
 | Stored first guess matches a fresh recomputation | T9 |

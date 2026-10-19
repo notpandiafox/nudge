@@ -6,11 +6,13 @@
 #include <memory>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 #include "nudge/text_format.hpp"
 #include "nudge/wordle_solver.hpp"
 #include "reference/simple_feedback.hpp"
+#include "reference/simple_hard_mode.hpp"
 
 namespace nudge {
 
@@ -25,7 +27,19 @@ struct GameTree {
     std::map<std::string, std::string> moves;  // position -> the guess made there
     int countMismatches = 0;  // positions where the solver's candidate count or fallback disagrees
     int replayFailures = 0;   // veteran words the solver refused while replaying a position
+    // Moves hard mode forbids, by the independent rule (plan §8.1). Counted in every
+    // walk, so a normal-mode walk shows the check can fire; must be 0 in hard mode.
+    int hardModeViolations = 0;
 };
+
+// Pattern text as the reference checkers read it, e.g. "GYXXG".
+inline std::string patternText(const FeedbackPattern& pattern) {
+    std::string text;
+    for (const Tile tile : pattern) {
+        text += "XYG"[static_cast<int>(tile)];
+    }
+    return text;
+}
 
 using MakeStrategy = std::function<std::unique_ptr<ScoringStrategy>()>;
 
@@ -33,8 +47,8 @@ inline constexpr int kDepthLimit = 10;  // stops the walk if a bug makes it loop
 
 inline void walkFrom(const WordLists& lists, const MakeStrategy& makeStrategy,
                      std::vector<VeteranWord>& veterans, const std::string& position,
-                     const std::vector<std::string>& answers, GameTree& tree) {
-    WordleSolver solver(makeStrategy(), false, lists);
+                     const std::vector<std::string>& answers, GameTree& tree, bool hardMode) {
+    WordleSolver solver(makeStrategy(), hardMode, lists);
     for (const VeteranWord& veteran : veterans) {
         if (solver.addFeedbackPattern(veteran.word, veteran.pattern) != Status::Ok) {
             ++tree.replayFailures;
@@ -47,6 +61,13 @@ inline void walkFrom(const WordLists& lists, const MakeStrategy& makeStrategy,
     }
     const std::string guess = solver.getBestGuess();
     tree.moves[position] = guess;
+    std::vector<std::pair<std::string, std::string>> history;
+    for (const VeteranWord& veteran : veterans) {
+        history.emplace_back(veteran.word, patternText(veteran.pattern));
+    }
+    if (!reference::simpleHardModeAllows(history, guess)) {
+        ++tree.hardModeViolations;
+    }
 
     std::map<std::string, std::vector<std::string>> groups;  // reference pattern -> answers
     for (const std::string& answer : answers) {
@@ -61,7 +82,7 @@ inline void walkFrom(const WordLists& lists, const MakeStrategy& makeStrategy,
         } else {
             veterans.push_back({guess, *parsePattern(pattern)});
             walkFrom(lists, makeStrategy, veterans, position + guess + ":" + pattern + " ", group,
-                     tree);
+                     tree, hardMode);
             veterans.pop_back();
         }
     }
@@ -85,14 +106,15 @@ inline std::uint64_t movesDigest(const std::map<std::string, std::string>& moves
     return hash;
 }
 
-inline GameTree walkAllGames(const WordLists& lists, const MakeStrategy& makeStrategy) {
+inline GameTree walkAllGames(const WordLists& lists, const MakeStrategy& makeStrategy,
+                             bool hardMode = false) {
     std::vector<std::string> answers;
     for (const Word& answer : lists.answers()) {
         answers.push_back(answer.text());
     }
     GameTree tree;
     std::vector<VeteranWord> veterans;
-    walkFrom(lists, makeStrategy, veterans, "", answers, tree);
+    walkFrom(lists, makeStrategy, veterans, "", answers, tree, hardMode);
     return tree;
 }
 

@@ -2,8 +2,10 @@
 
 #include <algorithm>
 #include <cassert>
+#include <iterator>
 
 #include "feedback_code.hpp"
+#include "hard_mode.hpp"
 #include "nudge/text_format.hpp"
 #include "ranking.hpp"
 
@@ -43,9 +45,12 @@ std::vector<Word> consistentWords(const std::vector<Clue>& clues, const std::vec
 
 ScoringStrategy::~ScoringStrategy() = default;
 
-WordleSolver::WordleSolver(std::unique_ptr<ScoringStrategy> strategy, bool /*hardMode*/,
+WordleSolver::WordleSolver(std::unique_ptr<ScoringStrategy> strategy, bool hardMode,
                            WordLists lists)
-    : lists_(std::move(lists)), strategy_(std::move(strategy)), view_(derive({})) {
+    : lists_(std::move(lists)),
+      strategy_(std::move(strategy)),
+      hardMode_(hardMode),
+      view_(derive({})) {
     assert(strategy_ && "WordleSolver needs a strategy");
 }
 
@@ -84,7 +89,19 @@ std::string WordleSolver::getBestGuess() const {
             return stored->text();
         }
     }
-    return rankBest(lists_.guesses(), view_.candidates, *strategy_, view_.triedLetters).text();
+    if (!hardMode_) {
+        return rankBest(lists_.guesses(), view_.candidates, *strategy_, view_.triedLetters).text();
+    }
+    const HardModeConstraints constraints = hardModeConstraints(veterans_);
+    std::vector<Word> pool;
+    std::copy_if(lists_.guesses().begin(), lists_.guesses().end(), std::back_inserter(pool),
+                 [&](const Word& guess) { return isHardModeLegal(guess, constraints); });
+    // Never empty (plan §5.12): there is always a candidate (addFeedbackPattern keeps
+    // no state without one), every candidate is a guess (fromWords checks answers
+    // are guesses; fallback takes them from the guess list), and a candidate fits
+    // all the feedback, so it passes the rule.
+    assert(!pool.empty());
+    return rankBest(pool, view_.candidates, *strategy_, view_.triedLetters).text();
 }
 
 std::size_t WordleSolver::getRemainingCount() const { return view_.candidates.size(); }
@@ -102,6 +119,8 @@ Status WordleSolver::setStrategy(std::unique_ptr<ScoringStrategy> strategy) {
 }
 
 Status WordleSolver::setStrategy(std::string_view name) { return setStrategy(makeStrategy(name)); }
+
+void WordleSolver::setHardMode(bool on) { hardMode_ = on; }
 
 void WordleSolver::reset() {
     veterans_.clear();

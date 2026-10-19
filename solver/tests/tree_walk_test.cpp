@@ -39,6 +39,22 @@ TEST(TreeWalk, DigestsEveryMove) {
     EXPECT_NE(movesDigest(moves), 0x37ed8b96991ef816u);
 }
 
+TEST(TreeWalk, PlaysHardModeWhenAsked) {
+    // Opening with bills (stored, so ranking can't open with fhkmx) leaves four
+    // ?ills words with ?ills green: fhkmx splits them best, but hard mode can't play it.
+    const WordLists lists = *WordLists::fromWords(
+        {"bills", "fills", "hills", "kills", "mills"},
+        {"bills", "fhkmx", "fills", "hills", "kills", "mills"}, {{"minimax", "bills"}});
+    const GameTree normal = walkAllGames(lists, minimax, false);
+    const GameTree hard = walkAllGames(lists, minimax, true);
+    // The violation check must be able to fire, or "0 violations" in the slow test
+    // proves nothing: normal mode plays fhkmx after bills:XGGGG.
+    EXPECT_EQ(normal.moves.at("bills:XGGGG "), "fhkmx");
+    EXPECT_EQ(normal.hardModeViolations, 1);
+    EXPECT_EQ(hard.moves.at("bills:XGGGG "), "fills");
+    EXPECT_EQ(hard.hardModeViolations, 0);
+}
+
 TEST(TreeWalk, StopsAtTheDepthLimit) {
     // This strategy prefers the worst guess: zzzzz, which keeps both answers
     // together forever, so the walk must stop at the limit instead of looping.
@@ -61,14 +77,14 @@ TEST(TreeWalk, CountsAPositionWhereTheSolverAndTheReferenceDisagree) {
     // The solver has two candidates, but the walk is told only crane is left.
     GameTree tree;
     std::vector<VeteranWord> veterans;
-    walkFrom(twoAnswers(), minimax, veterans, "", {"crane"}, tree);
+    walkFrom(twoAnswers(), minimax, veterans, "", {"crane"}, tree, false);
     EXPECT_EQ(tree.countMismatches, 1);
 }
 
 TEST(TreeWalk, CountsAVeteranWordTheSolverRefuses) {
     GameTree tree;
     std::vector<VeteranWord> veterans{{"cr4ne", *parsePattern("XXXXX")}};
-    walkFrom(twoAnswers(), minimax, veterans, "", {"crane", "crate"}, tree);
+    walkFrom(twoAnswers(), minimax, veterans, "", {"crane", "crate"}, tree, false);
     EXPECT_GT(tree.replayFailures, 0);
 }
 

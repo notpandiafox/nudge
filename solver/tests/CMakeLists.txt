@@ -4,6 +4,7 @@ include(GoogleTest)
 add_executable(nudge_fast_tests
     entropy_strategy_test.cpp
     feedback_test.cpp
+    hard_mode_test.cpp
     minimax_strategy_test.cpp
     ranking_test.cpp
     text_format_test.cpp

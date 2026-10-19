@@ -1,6 +1,7 @@
 add_library(nudge_solver
     src/entropy_strategy.cpp
     src/feedback.cpp
+    src/hard_mode.cpp
     src/minimax_strategy.cpp
     src/ranking.cpp
     src/text_format.cpp

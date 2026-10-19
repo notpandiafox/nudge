@@ -23,7 +23,7 @@ struct VeteranWord {
 };
 
 // Tracks one Wordle game (plan §5.5). It stores only the veteran words and the
-// strategy; everything else is recomputed from them. (Hard mode arrives in T10.)
+// strategy and the mode; everything else is recomputed from them.
 class WordleSolver {
 public:
     // The lists are copied, so a temporary WordLists is safe to pass.
@@ -39,6 +39,8 @@ public:
     bool isUsingFallback() const;
     Status setStrategy(std::unique_ptr<ScoringStrategy> strategy);
     Status setStrategy(std::string_view name);  // "minimax" or "entropy" (makeStrategy)
+    // Hard mode suggests only guesses it allows (rule B, plan §5.12). Keeps the game.
+    void setHardMode(bool on);
     void reset();
 
 private:
@@ -53,6 +55,7 @@ private:
 
     WordLists lists_;
     std::unique_ptr<ScoringStrategy> strategy_;
+    bool hardMode_;
     std::vector<VeteranWord> veterans_;
     View view_;
 };

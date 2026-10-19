@@ -236,13 +236,66 @@ TEST(WordleSolverFirstGuess, IsComputedWhenNoneIsStoredForTheStrategy) {
 
 TEST(WordleSolverFirstGuess, OnTheBuiltinListsInEitherMode) {
     // Shared spec: the same in hard mode, which has nothing to restrict before
-    // the first guess. (Hard mode itself arrives in T10.)
+    // the first guess.
     for (const bool hardMode : {false, true}) {
         WordleSolver solver(std::make_unique<MinimaxStrategy>(), hardMode);
         EXPECT_EQ(solver.getBestGuess(), "olate") << "hard mode " << hardMode;
         ASSERT_EQ(solver.setStrategy("entropy"), Status::Ok);
         EXPECT_EQ(solver.getBestGuess(), "tarse") << "hard mode " << hardMode;
     }
+}
+
+// The -ills words plus fhkmx, which splits f, h, k and m apart but breaks
+// hard mode once ?ills is green.
+WordLists illsLists(const std::vector<std::string_view>& answers) {
+    return *WordLists::fromWords(answers, {"bills", "fhkmx", "fills", "hills", "kills", "mills"});
+}
+
+TEST(WordleSolverHardMode, OnlySuggestsGuessesHardModeAllows) {
+    const WordLists lists = illsLists({"bills", "fills", "hills", "kills", "mills"});
+    WordleSolver normal(std::make_unique<MinimaxStrategy>(), false, lists);
+    WordleSolver hard(std::make_unique<MinimaxStrategy>(), true, lists);
+    for (WordleSolver* solver : {&normal, &hard}) {
+        ASSERT_EQ(solver->addFeedbackPattern("bills", pattern("XGGGG")), Status::Ok);
+    }
+    EXPECT_EQ(normal.getBestGuess(), "fhkmx");
+    // Hard mode needs ?ills: only the candidates are left, all tied, f first.
+    EXPECT_EQ(hard.getBestGuess(), "fills");
+}
+
+TEST(WordleSolverHardMode, SwitchingMidGameChangesThePoolAndKeepsTheGame) {
+    // Starts in normal mode, so turning hard mode on has to build its pool then.
+    WordleSolver solver(std::make_unique<MinimaxStrategy>(), false,
+                        illsLists({"bills", "fills", "hills", "kills", "mills"}));
+    ASSERT_EQ(solver.addFeedbackPattern("bills", pattern("XGGGG")), Status::Ok);
+    EXPECT_EQ(solver.getBestGuess(), "fhkmx");
+    solver.setHardMode(true);
+    EXPECT_EQ(solver.getBestGuess(), "fills");
+    solver.setHardMode(false);  // off again: every guess is back
+    EXPECT_EQ(solver.getBestGuess(), "fhkmx");
+    EXPECT_EQ(solver.getVeteranWords().size(), 1u);
+    EXPECT_EQ(solver.getRemainingCount(), 4u);
+}
+
+TEST(WordleSolverHardMode, ResetKeepsHardModeOn) {
+    // Shared spec: reset() clears the game but keeps the strategy and the hard-mode setting.
+    WordleSolver solver(std::make_unique<MinimaxStrategy>(), true,
+                        illsLists({"bills", "fills", "hills", "kills", "mills"}));
+    ASSERT_EQ(solver.addFeedbackPattern("bills", pattern("XGGGG")), Status::Ok);
+    solver.reset();
+    ASSERT_EQ(solver.addFeedbackPattern("bills", pattern("XGGGG")), Status::Ok);
+    EXPECT_EQ(solver.getBestGuess(), "fills");  // fhkmx if reset had turned hard mode off
+}
+
+TEST(WordleSolverHardMode, WorksTogetherWithFallback) {
+    // bills is the only answer, so after XGGGG the candidates come from the guess list.
+    WordleSolver solver(std::make_unique<MinimaxStrategy>(), true, illsLists({"bills"}));
+    ASSERT_EQ(solver.addFeedbackPattern("bills", pattern("XGGGG")), Status::Ok);
+    EXPECT_TRUE(solver.isUsingFallback());
+    EXPECT_EQ(solver.getRemainingCount(), 4u);
+    EXPECT_EQ(solver.getBestGuess(), "fills");
+    solver.setHardMode(false);
+    EXPECT_EQ(solver.getBestGuess(), "fhkmx");
 }
 
 TEST(WordleSolver, BuiltinListsByDefault) {
