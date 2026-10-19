@@ -91,8 +91,9 @@ jobs:
       - name: clang-tidy
         run: clang-tidy-18 -p build $(git ls-files 'solver/src/*.cpp')
 
-  # Builds the solver as WebAssembly and runs the benchmark's worst cases under
-  # Node. Like the native benchmark, it only fails above 2x the budget (plan §8.5).
+  # Builds the solver as WebAssembly: the JavaScript module's Node tests, every
+  # game played the same as natively (plan §8.4), and the worst cases' times,
+  # which only fail above 2x the budget (§8.5).
   wasm:
     runs-on: ubuntu-24.04
     steps:
@@ -106,8 +107,13 @@ jobs:
         run: emcmake cmake -S . -B build-wasm -G Ninja -DCMAKE_BUILD_TYPE=Release -DNUDGE_WARNINGS_AS_ERRORS=ON
       - name: Build
         run: cmake --build build-wasm
-      - name: Benchmark worst cases (warm, best of 5)
-        run: node build-wasm/solver/bench/nudge_bench.js
+      - name: Node tests (the JavaScript interface)
+        run: node --test solver/wasm/tests/solver.test.mjs
+        env:
+          NUDGE_WASM: build-wasm/solver/wasm/nudge.mjs
+      # Fails unless all four trees are exactly the recorded native ones.
+      - name: Every game the same as natively, and worst cases (warm, best of 5)
+        run: node build-wasm/solver/bench/nudge_bench.js --games
       - name: Benchmark worst cases (cold, one hint per fresh process)
         run: |
           for strategy in minimax entropy; do

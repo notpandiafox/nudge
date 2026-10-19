@@ -29,9 +29,10 @@ endfunction()
 nudge_compile_options(nudge_solver)
 
 add_subdirectory(bench)
-# Native only: the WebAssembly build uses their committed output.
-if(NOT EMSCRIPTEN)
-    add_subdirectory(tools)
+if(EMSCRIPTEN)
+    add_subdirectory(wasm)  # the JavaScript interface
+else()
+    add_subdirectory(tools)  # native only: the WebAssembly build uses their committed output
 endif()
 
 if(NUDGE_BUILD_TESTS)

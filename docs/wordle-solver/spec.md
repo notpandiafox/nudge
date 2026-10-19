@@ -261,7 +261,16 @@ public:
   top-level intent's open question about the default is decided), then calls
   `setStrategy(name)`.
 - Errors are returned as a `Status`, not thrown, because exceptions are off by
-  default in Emscripten's WebAssembly builds.
+  default in Emscripten's WebAssembly builds. That covers every *value* a
+  caller can send: any text as a word or a pattern, and any strategy name.
+- **Mistakes in the calling code are not statuses** (decided in the T12
+  review). From JavaScript, an argument of the wrong type (`undefined`,
+  `null`, a number, a missing argument) or a call on a solver after its
+  `delete()` throws a `BindingError` before the solver sees it, and the
+  solver is unchanged. The extension's own types (TypeScript) are what
+  prevent these. The hard-mode flag must be a real boolean: JavaScript's
+  rules make any non-empty string true, so `setHardMode("false")` turns hard
+  mode on.
 
 ## Non-functional requirements
 

@@ -156,10 +156,11 @@ nudge/
 │   ├── tests/
 │   │   ├── reference/              independent checkers: simple feedback, simple hard-mode rule
 │   │   ├── tree_walk.hpp           plays every game as a decision tree
+│   │   ├── recorded_trees.hpp      the pinned trees, shared with the benchmark
 │   │   └── *_test.cpp              fast and slow tests
 │   ├── bench/                      nudge_bench: statistics, worst cases, timing
-│   ├── tools/                      nudge_precompute (first guesses), nudge_tree (tree dump)
-│   └── wasm/                       bindings.cpp (registration only) + Node tests
+│   ├── tools/                      nudge_precompute (first guesses)
+│   └── wasm/                       bindings.cpp (registration only), tests/ (Node tests)
 ├── data/
 │   ├── answers.inc                 2,309 words, from stuartpb/wordles
 │   ├── guesses.inc                 14,855 words, from tabatkins/wordle-list
@@ -772,12 +773,25 @@ functions from §5.3; it contains no checks or conversions of its own:
 - `new Solver(hardMode)` creates a solver with the default strategy
   (minimax), so the constructor can't fail.
 - `solver.setStrategy("entropy")` → `"Ok"` or `"UnknownStrategy"`.
-- `solver.addFeedbackPattern("crane", "XYGXX")` → a status text.
+- `solver.addFeedbackPattern("crane", "XYGXX")` → a status text. The core
+  takes the pattern as text too (an `addFeedbackPattern(word, patternText)`
+  overload), so reading the text, and the order of the checks (`GameOver`,
+  then `InvalidWord`, then `InvalidPattern`), are in the core and tested
+  natively; the wrapper only forwards. (T12 first converted the text in the
+  wrapper with a made-up fourth color; the T12 review moved it into the core.)
 - `solver.getBestGuess()`, `getRemainingCount()`, `isUsingFallback()`,
   `setHardMode(on)`, `reset()`.
-- Build flags: `-lembind`, `-sMODULARIZE=1`, `-sEXPORT_ES6=1`, plus
-  `-ffp-contract=off` like the native build. (Emscripten's Release build
-  already sets the optimization level.)
+- Build flags: `-lembind`, `-sMODULARIZE=1`, `-sEXPORT_ES6=1`,
+  `-sALLOW_MEMORY_GROWTH=1`, plus `-ffp-contract=off` like the native build.
+  (Emscripten's Release build already sets the optimization level.)
+- **The JavaScript contract** (T12 review, written into the spec): every
+  value a caller can send gets a status; a wrong type, a missing argument or
+  a call after `delete()` throws a `BindingError` and leaves the solver as it
+  was. Every `new Solver(...)` needs a `delete()`: embind objects aren't
+  garbage-collected. A forgotten one costs about 100 KB (each solver copies
+  the word lists), and memory growth keeps that from becoming an
+  out-of-memory abort; with the default fixed 16 MB, the 157th leaked solver
+  aborted. The Node tests pin all of this.
 
 *Why a wrapper at all:* the C++ interface passes strategies as `unique_ptr`
 and patterns as arrays of enums, which don't map cleanly to JavaScript.
@@ -1328,6 +1342,50 @@ the 0–242 code directly instead of filling five tiles and encoding them.
 spike in T4 done, the remaining risk is small, and every correctness
 question has already been answered natively, where debugging is easier.
 
+**Done in T12: the solver is finished.** The WebAssembly build plays all four
+trees (about 9,700 positions) exactly like the native one, and the module the
+extension will import passes its Node tests.
+
+- `solver/wasm/bindings.cpp` registers a JavaScript `Solver` class (§5.15)
+  and builds `nudge.mjs` + `nudge.wasm` (`-lembind -sMODULARIZE=1
+  -sEXPORT_ES6=1 -sALLOW_MEMORY_GROWTH=1`, Emscripten only). Every method
+  only forwards: the pattern text goes to the core's text overload of
+  `addFeedbackPattern`, which reads it and keeps the order of the checks
+  (tested natively).
+- `solver/wasm/tests/solver.test.mjs` uses Node's built-in test runner (no
+  npm packages), with its own JavaScript feedback and rule B so the solver
+  never grades itself. It checks:
+  - **28 games move by move against the native build** (6 hard answers and a
+    fallback game, both strategies, both modes; the moves were recorded with
+    the native solver), so the module the extension imports is tied to native
+    directly, not only through the benchmark;
+  - every bad value's status text, and that it changes nothing;
+  - the JavaScript contract (§5.15): wrong types and use after `delete()`
+    throw `BindingError` and leave the solver usable;
+  - 400 solvers that are never deleted, after which a new one still plays;
+  - fallback in both modes, `setHardMode` and `reset` (found by playing the
+    same game in both modes and taking the first different move);
+  - the worst fallback through the interface, best of 3 (about 360 ms on the
+    developer's laptop; the test fails only above the CI gate of 2× the
+    budget).
+- Native and WebAssembly agree on every position through the digests
+  (§8.4): the WebAssembly benchmark plays all four trees in about 27 seconds.
+  `treeDifferences` in `recorded_trees.hpp` is the one definition of "the
+  same tree", used by both the slow tests and the benchmark, and says what
+  differs.
+- **The T12 review** (three reviewers, all running the built module with
+  hostile inputs) found the gaps above: the fixed 16 MB heap (the 157th
+  leaked solver aborted), wrong types throwing where the spec only promised
+  statuses (now written down as the contract), and the wrapper converting
+  the pattern text itself with a made-up fourth color (now in the core).
+  Browser loading is still untested; it's in §12 for the extension plan.
+- Mutation checks, each caught: `setHardMode` or `reset` not forwarded, the
+  constructor ignoring hard mode, `setStrategy` ignoring the name, fallback
+  always false (Node tests); the pattern text ignored, the pattern checked
+  before the word (native tests); no memory growth (the 400-solver test); a
+  wrong pin (the benchmark reports "DIFFERS" with the reason and fails, and
+  so does the slow test).
+
 ---
 
 ## 8. Testing strategy
@@ -1339,7 +1397,7 @@ question has already been answered natively, where debugging is easier.
 | Full game | every answer, both strategies, both modes; first-guess check | before a commit, in CI | `slow` |
 | Determinism | fresh solvers give the same guess | before a commit, in CI | `slow` |
 | Sanitizer | fast tests with AddressSanitizer and UBSan | in CI | `fast` |
-| WebAssembly | Node tests; native vs. WebAssembly on every position | in CI, locally after T12 | Node |
+| WebAssembly | Node tests; the benchmark's every-position check against the recorded trees (§8.4) | in CI, locally after T12 | Node |
 | Coverage | gcovr over the fast tests; pytest-cov over the script tests | every push, locally before a commit | gate |
 | Benchmark | statistics and timing | by hand, and reported in CI | report |
 
@@ -1396,11 +1454,18 @@ WebAssembly) and T9's stored first guess.
 
 ### 8.4 Native and WebAssembly agree
 
-`nudge_tree` (native) writes the whole tree (each position and its guess) for
-both strategies. The Node test walks the same tree with the WebAssembly
-solver and compares every position. In CI, the `wasm` job builds both and
-generates the native file fresh on every run, so there's no committed file
-to go stale.
+The WebAssembly build of `nudge_bench --games` plays every game of both
+strategies in both modes and compares each tree with the recorded one
+(`tests/recorded_trees.hpp`): the opener, the distribution, the position
+count and the digest of every move (T8). The native slow tests check the same
+recorded trees, so if both pass, the two builds play every position the same.
+The `wasm` job runs it on every push.
+
+*Changed in T12 (your decision):* the plan had a native `nudge_tree` tool
+write the whole tree to a file and a Node test replay it through the
+JavaScript interface. The digest does the same comparison with no tool, no
+file and no JavaScript tree walker, and it covers hard mode too. The
+JavaScript interface itself is tested by the Node tests (T12).
 
 *Why the whole tree instead of 50 games:* the risk is a rare near-tie where
 the two math libraries round differently (§5.7). A sample of 50 games would
@@ -1577,6 +1642,15 @@ Things this plan deliberately leaves for the extension:
   documentation once the manifest version is chosen.
 - **Loading the `.wasm` file:** as a separate packaged file, or embedded into
   the JavaScript with `-sSINGLE_FILE`.
+- **Nothing has loaded the module in a browser yet.** The solver's tests run
+  it in Node only. `nudge.mjs` is built for every environment, so it carries
+  Node-only code paths (`node:fs`, `node:module`) that are skipped at run
+  time but could confuse a bundler; the shipped copy may want
+  `-sENVIRONMENT=web,worker` while the tests keep the Node one. The
+  extension plan needs a first check that loads it in Firefox, from the
+  extension, under its content security policy.
+- **One solver per game page,** reused with `reset()`, and `delete()`d when
+  the page goes away (§5.15).
 - **What to show** in fallback mode, on `ImpossibleState` (with the GitHub
   issues link), and on `UnknownStrategy` (for example, reset the saved
   setting to the default).

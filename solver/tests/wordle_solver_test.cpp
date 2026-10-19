@@ -103,6 +103,31 @@ TEST(WordleSolver, AllGreenMeansSolvedEvenForAnUnknownWord) {
     EXPECT_FALSE(solver.isUsingFallback());
 }
 
+// The pattern as text, the way JavaScript sends it (plan §5.15).
+TEST(WordleSolverPatternText, ReadsTheTextLikeParsePattern) {
+    WordleSolver solver = tinyGame();
+    EXPECT_EQ(solver.addFeedbackPattern("slate", "xxGgG"), Status::Ok);  // either case
+    ASSERT_EQ(solver.getVeteranWords().size(), 1u);
+    EXPECT_EQ(solver.getVeteranWords()[0].pattern, pattern("XXGGG"));
+    EXPECT_EQ(solver.getRemainingCount(), 1u);
+}
+
+TEST(WordleSolverPatternText, TextThatIsNoPatternIsRejectedAndChangesNothing) {
+    WordleSolver solver = tinyGame();
+    for (const std::string_view text : {"", "XXXX", "XXXXXX", "XXXXQ", "GY XG"}) {
+        EXPECT_EQ(solver.addFeedbackPattern("slate", text), Status::InvalidPattern) << text;
+    }
+    EXPECT_TRUE(solver.getVeteranWords().empty());
+    EXPECT_EQ(solver.getRemainingCount(), 2u);
+}
+
+TEST(WordleSolverPatternText, ChecksInTheSameOrderAsThePatternVersion) {
+    WordleSolver solver = tinyGame();
+    EXPECT_EQ(solver.addFeedbackPattern("cr4ne", "nonsense"), Status::InvalidWord);  // word first
+    ASSERT_EQ(solver.addFeedbackPattern("crane", "GGGGG"), Status::Ok);
+    EXPECT_EQ(solver.addFeedbackPattern("cr4ne", "nonsense"), Status::GameOver);  // then nothing
+}
+
 TEST(WordleSolver, NoMoreGuessesAfterTheGameIsWon) {
     WordleSolver solver = tinyGame();
     ASSERT_EQ(solver.addFeedbackPattern("crane", pattern("GGGGG")), Status::Ok);

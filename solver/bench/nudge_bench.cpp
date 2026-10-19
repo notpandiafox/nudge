@@ -12,9 +12,11 @@
 //                                      the guesses (fallback) that give <pattern>
 //
 // Exits with 1 when a hint takes more than twice the 500 ms budget, CI's loose gate
-// (§8.5). The budget itself is checked by reading the numbers on your laptop.
+// (§8.5; the budget itself is checked by reading the numbers on your laptop), or
+// when a played tree isn't exactly the recorded one (§8.4).
 #include <algorithm>
 #include <chrono>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <string>
@@ -22,6 +24,7 @@
 #include <vector>
 
 #include "nudge/text_format.hpp"
+#include "recorded_trees.hpp"
 #include "tree_walk.hpp"
 #include "worst_cases.hpp"
 
@@ -82,61 +85,74 @@ double reportWorstCases(const nudge::WordLists& lists, std::FILE* json) {
     return slowest;
 }
 
-// Plays every game of each strategy in each mode. Returns the slowest hint.
-// Writes the "trees" list when json is set.
-double reportGames(const nudge::WordLists& lists, std::FILE* json) {
-    double slowest = 0;
+struct GamesReport {
+    double slowestMs = 0;
+    int treesDiffering = 0;  // trees not exactly the recorded ones (§8.4)
+};
+
+// Plays every game of each strategy in each mode, and checks each tree is
+// exactly the recorded one: in WebAssembly, that's the check that both builds
+// play every position the same (§8.4). Writes the "trees" list when json is set.
+GamesReport reportGames(std::FILE* json) {
+    GamesReport report;
     bool firstTree = true;
-    for (const bool hardMode : {false, true}) {
-        for (const char* strategy : kStrategies) {
-            const nudge::GameTree tree = nudge::walkAllGames(
-                lists, [strategy] { return nudge::makeStrategy(strategy); }, hardMode);
-            const char* mode = hardMode ? "hard" : "normal";
-            std::printf(
-                "\n%s, %s mode: opens with %s, average %.4f, worst %d, unsolved %zu, "
-                "positions %zu\n  guesses:",
-                strategy, mode, tree.moves.at("").c_str(), nudge::averageGuesses(tree),
-                nudge::worstGuesses(tree), tree.unsolved.size(), tree.moves.size());
-            for (const auto& [length, count] : tree.gamesByLength) {
-                std::printf(" %d: %d", length, count);
-            }
-            std::printf("\n  turn  positions  max candidates  max pool  mean ms   max ms\n");
-            for (const auto& [turn, stats] : tree.turns) {
-                std::printf("  %4d  %9d  %14zu  %8zu  %7.1f  %7.1f%s\n", turn, stats.positions,
-                            stats.maxCandidates, stats.maxPool, stats.totalMs / stats.positions,
-                            stats.maxMs, stats.maxMs > kBudgetMs ? "  OVER BUDGET" : "");
-                slowest = std::max(slowest, stats.maxMs);
-            }
-            if (json == nullptr) {
-                continue;
-            }
-            std::fprintf(json,
-                         "%s\n  {\"strategy\": \"%s\", \"mode\": \"%s\", \"opener\": \"%s\", "
-                         "\"average\": %.4f, \"worst\": %d, \"unsolved\": %zu, "
-                         "\"positions\": %zu, \"games_by_length\": {",
-                         firstTree ? "" : ",", strategy, mode, tree.moves.at("").c_str(),
-                         nudge::averageGuesses(tree), nudge::worstGuesses(tree),
-                         tree.unsolved.size(), tree.moves.size());
-            const char* separator = "";
-            for (const auto& [length, count] : tree.gamesByLength) {
-                std::fprintf(json, "%s\"%d\": %d", separator, length, count);
-                separator = ", ";
-            }
-            std::fprintf(json, "}, \"turns\": [");
-            separator = "";
-            for (const auto& [turn, stats] : tree.turns) {
-                std::fprintf(json,
-                             "%s{\"turn\": %d, \"positions\": %d, \"max_candidates\": %zu, "
-                             "\"max_pool\": %zu, \"mean_ms\": %.3f, \"max_ms\": %.3f}",
-                             separator, turn, stats.positions, stats.maxCandidates, stats.maxPool,
-                             stats.totalMs / stats.positions, stats.maxMs);
-                separator = ", ";
-            }
-            std::fprintf(json, "]}");
-            firstTree = false;
+    for (const nudge::RecordedTree& recorded : nudge::kRecorded) {
+        const nudge::GameTree tree = nudge::walkRecorded(recorded);
+        const char* strategy = recorded.strategy.c_str();
+        const char* mode = recorded.hardMode ? "hard" : "normal";
+        const std::uint64_t digest = nudge::movesDigest(tree.moves);
+        const std::string differences = nudge::treeDifferences(tree, recorded);
+        const bool matches = differences.empty();
+        report.treesDiffering += matches ? 0 : 1;
+        std::printf(
+            "\n%s, %s mode: opens with %s, average %.4f, worst %d, unsolved %zu, "
+            "positions %zu\n  guesses:",
+            strategy, mode, tree.moves.at("").c_str(), nudge::averageGuesses(tree),
+            nudge::worstGuesses(tree), tree.unsolved.size(), tree.moves.size());
+        for (const auto& [length, count] : tree.gamesByLength) {
+            std::printf(" %d: %d", length, count);
         }
+        std::printf("\n  digest 0x%016llx: %s\n", static_cast<unsigned long long>(digest),
+                    matches ? "the recorded tree"
+                            : ("DIFFERS from the recorded tree: " + differences).c_str());
+        std::printf("  turn  positions  max candidates  max pool  mean ms   max ms\n");
+        for (const auto& [turn, stats] : tree.turns) {
+            std::printf("  %4d  %9d  %14zu  %8zu  %7.1f  %7.1f%s\n", turn, stats.positions,
+                        stats.maxCandidates, stats.maxPool, stats.totalMs / stats.positions,
+                        stats.maxMs, stats.maxMs > kBudgetMs ? "  OVER BUDGET" : "");
+            report.slowestMs = std::max(report.slowestMs, stats.maxMs);
+        }
+        if (json == nullptr) {
+            continue;
+        }
+        std::fprintf(json,
+                     "%s\n  {\"strategy\": \"%s\", \"mode\": \"%s\", \"opener\": \"%s\", "
+                     "\"average\": %.4f, \"worst\": %d, \"unsolved\": %zu, "
+                     "\"positions\": %zu, \"digest\": \"0x%016llx\", "
+                     "\"matches_recorded\": %s, \"games_by_length\": {",
+                     firstTree ? "" : ",", strategy, mode, tree.moves.at("").c_str(),
+                     nudge::averageGuesses(tree), nudge::worstGuesses(tree), tree.unsolved.size(),
+                     tree.moves.size(), static_cast<unsigned long long>(digest),
+                     matches ? "true" : "false");
+        const char* separator = "";
+        for (const auto& [length, count] : tree.gamesByLength) {
+            std::fprintf(json, "%s\"%d\": %d", separator, length, count);
+            separator = ", ";
+        }
+        std::fprintf(json, "}, \"turns\": [");
+        separator = "";
+        for (const auto& [turn, stats] : tree.turns) {
+            std::fprintf(json,
+                         "%s{\"turn\": %d, \"positions\": %d, \"max_candidates\": %zu, "
+                         "\"max_pool\": %zu, \"mean_ms\": %.3f, \"max_ms\": %.3f}",
+                         separator, turn, stats.positions, stats.maxCandidates, stats.maxPool,
+                         stats.totalMs / stats.positions, stats.maxMs);
+            separator = ", ";
+        }
+        std::fprintf(json, "]}");
+        firstTree = false;
     }
-    return slowest;
+    return report;
 }
 
 int usage() {
@@ -151,6 +167,7 @@ int usage() {
 int main(int argc, char** argv) {
     const nudge::WordLists& lists = nudge::WordLists::builtin();
     double slowest = 0;
+    int treesDiffering = 0;
     if (argc == 5) {
         const auto opener = Word::parse(argv[2]);
         const std::string_view list = argv[4];
@@ -182,7 +199,9 @@ int main(int argc, char** argv) {
             if (json != nullptr) {
                 std::fprintf(json, "\n],\n\"trees\": [");
             }
-            slowest = std::max(slowest, reportGames(lists, json));
+            const GamesReport games = reportGames(json);
+            slowest = std::max(slowest, games.slowestMs);
+            treesDiffering = games.treesDiffering;
         }
         if (json != nullptr) {
             std::fprintf(json, "\n]}\n");
@@ -192,5 +211,8 @@ int main(int argc, char** argv) {
         return usage();
     }
     std::printf("\nslowest hint: %.1f ms (budget %.0f ms)\n", slowest, kBudgetMs);
-    return slowest > 2 * kBudgetMs ? 1 : 0;
+    if (treesDiffering > 0) {
+        std::printf("%d tree(s) differ from the recorded ones\n", treesDiffering);
+    }
+    return slowest > 2 * kBudgetMs || treesDiffering > 0 ? 1 : 0;
 }

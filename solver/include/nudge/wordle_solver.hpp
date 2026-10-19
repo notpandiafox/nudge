@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <span>
 #include <string>
 #include <string_view>
@@ -31,6 +32,8 @@ public:
                  WordLists lists = WordLists::builtin());
 
     Status addFeedbackPattern(const std::string& word, const FeedbackPattern& pattern);
+    // The same, with the pattern as text ("GYXXG", either case), the way JavaScript sends it.
+    Status addFeedbackPattern(const std::string& word, std::string_view patternText);
     // The suggested next guess, lowercase. Once solved, the winning word.
     std::string getBestGuess() const;
 
@@ -52,6 +55,8 @@ private:
         std::uint32_t triedLetters = 0;  // Word::mask() of every veteran word, combined
     };
     View derive(std::span<const VeteranWord> veterans) const;
+    // Both addFeedbackPattern versions: nothing for a pattern that isn't one.
+    Status add(const std::string& word, const std::optional<FeedbackPattern>& pattern);
 
     WordLists lists_;
     std::unique_ptr<ScoringStrategy> strategy_;

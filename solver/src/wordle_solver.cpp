@@ -55,6 +55,16 @@ WordleSolver::WordleSolver(std::unique_ptr<ScoringStrategy> strategy, bool hardM
 }
 
 Status WordleSolver::addFeedbackPattern(const std::string& word, const FeedbackPattern& pattern) {
+    const bool colors = std::all_of(pattern.begin(), pattern.end(), isColor);
+    return add(word, colors ? std::optional(pattern) : std::nullopt);
+}
+
+Status WordleSolver::addFeedbackPattern(const std::string& word, std::string_view patternText) {
+    return add(word, parsePattern(patternText));
+}
+
+// One order of checks for both versions: GameOver, then the word, then the pattern.
+Status WordleSolver::add(const std::string& word, const std::optional<FeedbackPattern>& pattern) {
     if (view_.solved) {
         return Status::GameOver;
     }
@@ -62,13 +72,13 @@ Status WordleSolver::addFeedbackPattern(const std::string& word, const FeedbackP
     if (!parsed) {
         return Status::InvalidWord;
     }
-    if (!std::all_of(pattern.begin(), pattern.end(), isColor)) {
+    if (!pattern) {
         return Status::InvalidPattern;
     }
     // Build the new state on the side and keep it only if it's possible, so a
     // rejected call changes nothing.
     std::vector<VeteranWord> veterans = veterans_;
-    veterans.push_back({parsed->text(), pattern});
+    veterans.push_back({parsed->text(), *pattern});
     View view = derive(veterans);
     if (!view.solved && view.candidates.empty()) {
         return Status::ImpossibleState;
