@@ -317,8 +317,12 @@ Nothing else needed it.
   `Yellow = 1`, `Green = 2`, and position `i` is worth `3^i`. All gray is 0,
   all green is 242.
 - `encode` turns a pattern into its code, with a test that all 243 patterns
-  get different codes from 0 to 242. (No `decode`: nothing needs to turn a
-  code back into a pattern. Add it the day something does.)
+  get different codes from 0 to 242.
+- `feedbackCode` builds the code directly, without tiles, because it's the
+  scoring loop's hot path. `computeFeedback` (the public, tile version) is
+  `decode(feedbackCode(...))`, so the rule is written once and the reference
+  tests on `computeFeedback` check the fast path too. (`decode` came back for
+  this before T12; it's private to `feedback.cpp`.)
 
 *Why 0–242:* there are 3 colors and 5 positions, so exactly 3⁵ = 243 possible
 patterns. That fits in one byte, and grouping candidates needs no hash map:
@@ -1283,6 +1287,31 @@ Windows laptop, MinGW GCC 12, -O3):
   `bench-report.json` to the run (the worst cases, then every tree with its
   per-turn numbers); the `wasm` job runs the worst cases warm
   and cold, for both strategies.
+
+### Speed fix (before T12)
+
+The T11 benchmark on CI's machines (about 1.7× slower than the developer's
+laptop) put the worst fallback over 500 ms: 568 ms natively and 537 ms warm
+in WebAssembly. Under CI's 2× gate, but it showed how little room a slower
+computer has. So §5.9's first fix went in before T12: `feedbackCode` builds
+the 0–242 code directly instead of filling five tiles and encoding them.
+
+| Worst case, best of 5 | Before | After |
+|---|---|---|
+| Worst opener, minimax / entropy, native | 250 / 277 ms | 222 / 253 ms |
+| Worst fallback, minimax / entropy, native | 321 / 335–340 ms | 276 / 298 ms |
+| Worst fallback, entropy, WebAssembly warm | 442 ms | 359 ms |
+| Worst fallback, entropy, WebAssembly cold | 453–474 ms | 378–383 ms |
+
+- **Exactly the same results:** every move of all four pinned trees is
+  unchanged (the digests still match), and the reference tests pass.
+- `computeFeedback` now decodes the fast code, so the 159,049 reference
+  comparisons in the fast tests check the code the solver actually uses. A
+  Yellow that doesn't use up a copy, which only the slow suite caught in T7,
+  now fails four fast tests.
+- Tried and dropped: scanning the five answer letters instead of a 26-entry
+  count table made the worst fallback much slower (493 ms native): the
+  nested loop branches too much.
 
 ### T12. WebAssembly build
 
