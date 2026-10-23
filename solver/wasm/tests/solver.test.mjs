@@ -125,6 +125,16 @@ const NATIVE_GAMES = {
   'entropy hard aahed': 'tarse labne cagey mawed vaded faked hazed aahed',
 };
 
+test('builds no code at run time, which an extension forbids', async () => {
+  // Firefox blocks new Function() and eval() in extension pages ("call to
+  // Function() blocked by CSP", found by the extension spike). embind uses
+  // new Function() unless built with -sDYNAMIC_EXECUTION=0.
+  const { readFile } = await import('node:fs/promises');
+  const source = await readFile(new URL(modulePath), 'utf8');
+  assert.doesNotMatch(source, /new Function\b/);
+  assert.doesNotMatch(source, /(^|[^\w.$])eval\(/);
+});
+
 test('starts the way the native solver does', () => {
   withSolver(false, (solver) => {
     assert.equal(solver.getRemainingCount(), 2309);

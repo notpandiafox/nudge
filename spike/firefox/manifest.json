@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "nudge spike",
+  "version": "0.0.1",
+  "description": "Throwaway spike: does the solver load in Firefox, and what does the Wordle page look like?",
+  "browser_specific_settings": {
+    "gecko": { "id": "nudge-spike@example.invalid" }
+  },
+  "action": {
+    "default_title": "nudge spike",
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.nytimes.com/games/wordle/*"],
+      "js": ["board.js"]
+    }
+  ],
+  "host_permissions": ["https://www.nytimes.com/games/wordle/*"],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
+  }
+}

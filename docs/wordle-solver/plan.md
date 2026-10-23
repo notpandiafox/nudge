@@ -782,7 +782,12 @@ functions from §5.3; it contains no checks or conversions of its own:
 - `solver.getBestGuess()`, `getRemainingCount()`, `isUsingFallback()`,
   `setHardMode(on)`, `reset()`.
 - Build flags: `-lembind`, `-sMODULARIZE=1`, `-sEXPORT_ES6=1`,
-  `-sALLOW_MEMORY_GROWTH=1`, plus `-ffp-contract=off` like the native build.
+  `-sALLOW_MEMORY_GROWTH=1`, `-sDYNAMIC_EXECUTION=0`, plus `-ffp-contract=off`
+  like the native build. `DYNAMIC_EXECUTION=0` was found by the extension
+  spike: by default embind builds functions with `new Function()`, and
+  Firefox blocks that in extension pages ("call to Function() blocked by
+  CSP"). A Node test fails if the module ever contains `new Function` or
+  `eval` again.
   (Emscripten's Release build already sets the optimization level.)
 - **The JavaScript contract** (T12 review, written into the spec): every
   value a caller can send gets a status; a wrong type, a missing argument or

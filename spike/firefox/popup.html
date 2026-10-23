@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>nudge spike</title>
+  <style>
+    body { font: 13px system-ui, sans-serif; width: 420px; margin: 10px; }
+    h1 { font-size: 15px; margin: 0 0 8px; }
+    .ok { color: #2e7d32; } .bad { color: #c62828; }
+    textarea { width: 100%; height: 220px; font: 11px monospace; }
+  </style>
+</head>
+<body>
+  <h1>nudge spike</h1>
+  <p id="solver">Loading the solver…</p>
+  <p id="board"></p>
+  <p>Report to copy back (check it first; it lists the page's saved-data names):</p>
+  <textarea id="report" readonly></textarea>
+  <script type="module" src="popup.js"></script>
+</body>
+</html>

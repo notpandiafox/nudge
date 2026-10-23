@@ -24,6 +24,19 @@ A firefox extension that scans your NYT online game (Wordle first, Strands later
 - Auto-filling or auto-playing guesses on the user's behalf
 - hint history or cross device sync stats
 
+## Answers so far (to be turned into the extension spec)
+- **Which game:** the extension knows by itself which NYT game is open. With no solver for that game, the user doesn't see the popup at all.
+- **The popup:** with a solved game open, the popup opens by itself with a *shrouded* hint: the hint is covered until the user asks, so nothing is shown unasked. It has two buttons, "Reveal the hint" and "Reveal a letter" (a random one). The letters already known (green) show through the shroud, but only where they fit the hint word: the best guess is sometimes a probe word that doesn't keep the greens in place (always fits in hard mode).
+- **When it opens by itself:** when the Wordle page opens and after each guess.
+- **Reveal a letter:** each press reveals one more letter (a random one still covered), until the whole word shows.
+- **Switches:** next to each other, an on/off switch for the automatic popup (when it's off, clicking the extension's button opens the same popup), and the strategy switch (minimax or entropy). Minimax is the default. Both are remembered after Firefox closes.
+- **Which saved entry:** when NYT keeps both a signed-in and a signed-out (`ANON`) game, nudge reads the one whose game matches the board on screen.
+- **No NYT game open:** clicking the extension's button shows only "Nudge" and the on/off switch for the automatic popup.
+- **No word fits** (the answer isn't in the answer list, or the board is impossible): the popup says "we don't know what the word is :C".
+- **Hard mode:** read from the setting the player checked in NYT's settings, which the spike showed nudge can read from the page's saved data (docs/extension/spike.md). There's no hard-mode switch in nudge's popup. If the setting can't be read, nudge treats it like a board it can't read: says so and asks the user to report it.
+- **When NYT's page changes** and the board can't be read: nudge notices, says it can't read the board, and asks the user to report it.
+- **Tests:** the games get recreated as saved copies of NYT's page, so the extension can be tested without the live site.
+
 ## Open questions
 - How resilient does DOM-reading need to be to NYT UI changes — is a broken extension until a manual fix acceptable, or does it need fallback detection?
 - what happens for a puzzle you don't have a solver for, or when the extension can't confidently read the board
