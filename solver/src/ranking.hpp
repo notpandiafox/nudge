@@ -15,7 +15,7 @@ static_assert(std::tuple_size_v<BucketCounts> == kPatternCount);
 // guess. Filling these is where nearly all of a hint's time goes (plan §5.4).
 BucketCounts bucketize(const Word& guess, std::span<const Word> candidates);
 
-struct ScoredGuess { 
+struct ScoredGuess {
     Word guess;
     double score;
 };
