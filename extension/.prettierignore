@@ -1,0 +1,4 @@
+dist/
+coverage/
+web-ext-artifacts/
+package-lock.json

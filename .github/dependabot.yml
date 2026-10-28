@@ -1,0 +1,11 @@
+# Opens pull requests when a pinned version has an update (plan E-D12).
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /extension
+    schedule:
+      interval: weekly
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

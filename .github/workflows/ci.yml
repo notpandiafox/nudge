@@ -120,6 +120,55 @@ jobs:
             node build-wasm/solver/bench/nudge_bench.js $strategy xviii 0 answers
             node build-wasm/solver/bench/nudge_bench.js $strategy sughs 162 guesses
           done
+      # The extension job packages these two files (extension plan §4).
+      - name: Share the JavaScript module
+        uses: actions/upload-artifact@v7
+        with:
+          name: solver-wasm
+          path: |
+            build-wasm/solver/wasm/nudge.mjs
+            build-wasm/solver/wasm/nudge.wasm
+
+  # The Firefox extension (docs/extension/plan.md §4): format, lint, types,
+  # tests with 100% coverage, Mozilla's own checks, and the packaged extension.
+  extension:
+    needs: wasm
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: extension
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: extension/package-lock.json
+      - uses: actions/download-artifact@v8
+        with:
+          name: solver-wasm
+          path: build-wasm/solver/wasm
+      - name: Install (exact versions from package-lock.json)
+        run: npm ci
+      - name: Formatting
+        run: npm run format:check
+      - name: Lint
+        run: npm run lint
+      - name: Type check
+        run: npm run typecheck
+      - name: Build
+        run: npm run build
+      - name: Tests (100% lines and functions)
+        run: npm test
+      - name: Mozilla's extension checks
+        run: npm run webext:lint
+      - name: Package
+        run: npm run package
+      - name: Upload the packaged extension
+        uses: actions/upload-artifact@v7
+        with:
+          name: nudge-extension
+          path: extension/web-ext-artifacts/
 
   python:
     runs-on: ubuntu-24.04

@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none" stroke="#000" stroke-width="4" stroke-linejoin="round" stroke-linecap="round">
-  <!-- Back to front: each shape's fill hides the outlines behind it, which draws the finger seams. -->
-  <rect x="6" y="36" width="16" height="42" rx="3" fill="#6AAA64"/>
-  <rect x="40" y="66" width="28" height="12" rx="6" fill="#F7DA21"/>
-  <rect x="40" y="55" width="32" height="12" rx="6" fill="#F7DA21"/>
-  <rect x="20" y="30" width="36" height="48" rx="11" fill="#F7DA21"/>
-  <rect x="32" y="30" width="62" height="15" rx="7.5" fill="#F7DA21"/>
-  <rect x="30" y="44" width="36" height="12" rx="6" fill="#F7DA21"/>
-</svg>
