@@ -66,7 +66,9 @@ server and no network requests.
   - if no game entry matches, from `games-settings-wordleV2/<entry>` →
     `hardMode`.
 - If neither can be read, hard mode is **unreadable**, handled like an
-  unreadable board.
+  unreadable board. It's also unreadable when the entries it would use
+  disagree (two matching games, or the signed-in and signed-out settings),
+  rather than nudge guessing which one applies (since E4).
 - There is no hard-mode switch in nudge.
 
 ### When the panel appears

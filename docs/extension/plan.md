@@ -242,6 +242,26 @@ read a board, which the panel can show with the report link (E7).
   settings entry, else unreadable.
 - **Done when:** on, off, both entries, and missing entries all read right.
 
+**Done in E4.** `readHardMode` (`src/content/readHardMode.ts`) reads every
+saved copy right, including the real two-entry case: in `empty-hard-on`, the
+signed-in entry holds an old game (5 rows, off) and the two settings disagree
+(signed in off, signed out on), and today's game (signed out, 0 rows, on)
+decides.
+
+- Order: the game whose played rows match the finished rows on screen; else
+  the settings when they agree; else unreadable. It reads only `hardMode` and
+  the row count, and skips any entry shaped differently instead of trusting
+  or failing on it.
+- **Disagreement is unreadable**, never a guess: two matching games that
+  disagree, or settings that disagree with no matching game. The spec now
+  says so.
+- A test for today's game beating the settings when they differ (a game
+  started in hard mode, with hard mode switched off since) was added after
+  noticing that no saved copy would catch the order being swapped.
+- Mutation checks, each caught: rows not matched, games ignored, settings
+  before the game, the first value winning over a disagreement, and
+  `hardMode` not checked to be true or false.
+
 ### E5. Solver host
 - The background script and the messages: board, hard mode and strategy in;
   hint, "no word", or an error out.
