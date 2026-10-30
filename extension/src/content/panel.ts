@@ -4,6 +4,7 @@
 // what to show. Text is always set as text, never as markup.
 import type { Settings } from '../settings';
 import { revealAll, revealLetter, type Shroud } from '../shroud';
+import type { Theme } from './theme';
 
 export const REPORT_URL = 'https://github.com/notpandiafox/nudge/issues';
 
@@ -24,6 +25,7 @@ export interface Panel {
   hide(): void;
   toggle(): void; // the toolbar button
   setSettings(settings: Settings): void;
+  setTheme(theme: Theme): void; // light or dark, like Wordle (plan E9)
 }
 
 export interface PanelOptions {
@@ -31,34 +33,47 @@ export interface PanelOptions {
   onSettings?: (change: Partial<Settings>) => void; // a switch was flipped
 }
 
+// Wordle's own colours, light and dark (spec "How the panel looks").
+// all: initial leaves these custom properties alone.
 const STYLE = `
-  :host { all: initial; }
+  :host {
+    all: initial; color-scheme: light;
+    --page: #ffffff; --text: #1a1a1b; --line: #d3d6da; --covered: #787c7e; --green: #6aaa64;
+    --button: #f6f7f8; --quiet: #6b6f73; --link: #0b57d0; --shadow: rgb(0 0 0 / 25%);
+  }
+  :host([theme="dark"]) {
+    color-scheme: dark;
+    --page: #121213; --text: #f8f8f8; --line: #3a3a3c; --covered: #3a3a3c; --green: #538d4e;
+    --button: #2a2a2c; --quiet: #a0a3a7; --link: #8ab4f8; --shadow: rgb(0 0 0 / 60%);
+  }
   /* all: initial outranks the browser's own [hidden] rule, so say it again. */
   :host([hidden]) { display: none; }
   .panel {
     position: fixed; top: 64px; right: 16px; z-index: 2147483647; width: 260px;
-    padding: 12px 14px; border-radius: 12px; background: #ffffff; color: #1a1a1b;
-    box-shadow: 0 4px 20px rgb(0 0 0 / 25%); font: 14px/1.4 system-ui, sans-serif;
+    padding: 12px 14px; border-radius: 12px; background: var(--page); color: var(--text);
+    border: 1px solid var(--line); box-shadow: 0 4px 20px var(--shadow);
+    font: 14px/1.4 system-ui, sans-serif;
   }
+  a { color: var(--link); }
   header { display: flex; justify-content: space-between; align-items: center; font-weight: 700; }
   .close { border: 0; background: none; font-size: 20px; cursor: pointer; color: inherit; }
   .boxes { display: flex; gap: 6px; margin: 10px 0; }
   .box {
     width: 36px; height: 36px; display: grid; place-items: center; border-radius: 4px;
     font-size: 20px; font-weight: 700; text-transform: uppercase;
-    background: #787c7e; color: #ffffff;
+    background: var(--covered); color: #ffffff;
   }
-  .box.shown { background: #6aaa64; }
+  .box.shown { background: var(--green); }
   .actions { display: flex; gap: 6px; }
   .actions button {
-    flex: 1; padding: 6px; border: 1px solid #d3d6da; border-radius: 6px; background: #f6f7f8;
+    flex: 1; padding: 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--button);
     font: inherit; cursor: pointer; color: inherit;
   }
   .actions button:disabled { opacity: 0.5; cursor: default; }
-  .reason { font-size: 12px; color: #6b6f73; }
+  .reason { font-size: 12px; color: var(--quiet); }
   .switches {
     display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 10px; padding-top: 8px;
-    border-top: 1px solid #d3d6da; font-size: 12px;
+    border-top: 1px solid var(--line); font-size: 12px;
   }
   .switches label { display: flex; align-items: center; gap: 4px; cursor: pointer; }
 `;
@@ -179,6 +194,9 @@ export function createPanel(document: Document, options: PanelOptions = {}): Pan
     toggle() {
       if (host.hidden) open();
       else host.hidden = true;
+    },
+    setTheme(theme) {
+      host.setAttribute('theme', theme);
     },
     setSettings(settings) {
       auto.input.checked = settings.autoPanel;

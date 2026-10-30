@@ -1,6 +1,7 @@
 // Turns the open Wordle page into a saved test copy (plan E2). What this keeps
 // is what gets committed, so it keeps by allowlist: unknown data is dropped,
 // never copied.
+import { backgroundBehindBoard } from '../src/content/theme';
 
 // Stand-ins for real NYT account numbers, in order of first appearance.
 export const FAKE_ACCOUNTS = ['10000001', '10000002', '10000003'] as const;
@@ -77,6 +78,7 @@ export interface Fixture {
   note: string;
   page: string;
   boardHtml: string | null;
+  background: string | null; // the colour behind the board, for the theme (plan E9)
   storage: Record<string, JsonObject>;
 }
 
@@ -93,6 +95,7 @@ export function makeFixture(input: {
     note: input.note,
     page: `${url.origin}${url.pathname}`,
     boardHtml: recordBoard(input.document),
+    background: backgroundBehindBoard(input.document),
     storage: recordStorage(input.storage),
   };
 }

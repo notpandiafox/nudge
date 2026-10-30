@@ -1,7 +1,7 @@
 // The two switches, kept in extension storage (plan E8, E-D9; spec "Switches").
 import { describe, expect, test } from 'vitest';
 
-import { DEFAULTS, loadSettings } from '../src/settings';
+import { DEFAULTS, loadSettings, loadTheme } from '../src/settings';
 import { fakeStorage } from './fakeStorage';
 
 describe('the switches', () => {
@@ -26,5 +26,14 @@ describe('the switches', () => {
     expect(await loadSettings(fakeStorage({ autoPanel: false, strategy: 'random' }).local)).toEqual(
       { autoPanel: false, strategy: 'minimax' },
     );
+  });
+});
+
+describe('the saved theme', () => {
+  test('is the last one Wordle had, or none', async () => {
+    expect(await loadTheme(fakeStorage({ theme: 'dark' }).local)).toBe('dark');
+    expect(await loadTheme(fakeStorage({ theme: 'light' }).local)).toBe('light');
+    expect(await loadTheme(fakeStorage().local)).toBeUndefined();
+    expect(await loadTheme(fakeStorage({ theme: 'purple' }).local)).toBeUndefined();
   });
 });

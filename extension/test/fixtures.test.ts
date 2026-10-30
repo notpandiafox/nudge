@@ -38,6 +38,14 @@ describe('saved copies of NYT’s page', () => {
       expect(fixture.boardHtml).toContain('aria-label="Row 1"');
     });
 
+    test('has no field but the known ones; the colour behind the board is only a colour', () => {
+      const known = ['recordedOn', 'note', 'page', 'boardHtml', 'background', 'storage'];
+      expect(Object.keys(fixture).filter((key) => !known.includes(key))).toEqual([]);
+      if (fixture.background != null) {
+        expect(fixture.background).toMatch(/^rgba?\([\d.,\s/%]+\)$/);
+      }
+    });
+
     test('keeps only the two Wordle entries, with fake account numbers', () => {
       for (const key of Object.keys(fixture.storage)) expect(key).toMatch(ENTRY);
     });

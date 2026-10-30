@@ -4,14 +4,34 @@
     <meta charset="utf-8" />
     <title>Nudge</title>
     <style>
+      /* Wordle's own colours, like the panel's (spec "How the panel looks"). */
+      :root {
+        color-scheme: light;
+        --page: #ffffff;
+        --text: #1a1a1b;
+      }
+      :root[theme='dark'] {
+        color-scheme: dark;
+        --page: #121213;
+        --text: #f8f8f8;
+      }
+      /* No saved theme yet (Wordle not seen): Firefox's own setting, with no
+         script, so the popup is never painted in the wrong colours first. */
+      @media (prefers-color-scheme: dark) {
+        :root:not([theme='light']) {
+          color-scheme: dark;
+          --page: #121213;
+          --text: #f8f8f8;
+        }
+      }
       body {
         margin: 12px 14px;
         width: 220px;
         font:
           14px/1.4 system-ui,
           sans-serif;
-        color: #1a1a1b;
-        background: #ffffff;
+        color: var(--text);
+        background: var(--page);
       }
       h1 {
         margin: 0 0 8px;

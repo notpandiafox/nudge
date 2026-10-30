@@ -5,6 +5,7 @@ import type { HintResponse, Toggle, WordlePage } from '../messages';
 import { loadSettings } from '../settings';
 import { watchPage } from './page';
 import { createPanel } from './panel';
+import { watchTheme } from './theme';
 
 const saved = browser.storage.local;
 // A flipped switch is only saved; the change comes back below, as it does in
@@ -21,6 +22,14 @@ const hello = () => void browser.runtime.sendMessage({ type: 'wordle-page' } sat
 hello();
 addEventListener('pageshow', (event) => {
   if (event.persisted) hello();
+});
+
+// Light or dark like Wordle; saved for the popup, which opens away from Wordle.
+watchTheme({
+  document,
+  systemDark: matchMedia('(prefers-color-scheme: dark)'),
+  panel,
+  save: (theme) => void saved.set({ theme }),
 });
 
 void loadSettings(saved).then((settings) => {

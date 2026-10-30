@@ -78,7 +78,7 @@ extension/
 │   ├── content/readBoard.ts     pure: Document → rows, or unreadable
 │   ├── content/readHardMode.ts  pure: saved data + rows on screen → hard mode, or unreadable
 │   ├── content/panel.ts         draws a panel state into the shadow root, light or dark
-│   ├── content/theme.ts         pure: the page → light or dark (E-D13)
+│   ├── content/theme.ts         the page → light or dark (E-D13), and watching it change
 │   ├── shroud.ts                pure: hint + known greens → boxes; reveal one, reveal all
 │   ├── background/solverHost.ts board + mode + strategy → hint or "no word"
 │   ├── popup/                   the "Nudge" popup (title + switch)
@@ -436,6 +436,40 @@ with the real page, NYT's saved data and `browser.runtime.sendMessage`.
   switch on the page changes the panel at once and asks for no new hint, the
   theme is saved once per change, and the popup shows the saved theme or
   Firefox's. In E10, both ways of going dark are checked on the live page.
+
+**Done in E9.**
+`src/content/theme.ts`: `backgroundBehindBoard` finds the first element,
+from the board's first row up (or from `<body>` before the board is drawn),
+whose background colour isn't fully see-through; `readTheme` calls it dark
+below half brightness (weighted as the eye sees: green counts most), and
+follows Firefox's own setting when no element has a colour. `watchTheme` sets
+the theme on the panel at the start and on every change (a class or style on
+`<html>` or `<body>`, the board being drawn, Firefox switching), and saves
+it once per change. The panel and the popup have Wordle's light and dark
+colours as CSS variables; the popup uses the saved theme, or Firefox's
+before Wordle has been seen. That second case is CSS alone
+(`prefers-color-scheme`), so the popup never shows white first (found in
+review: it used to wait for storage before turning dark). The recorder now keeps the colour behind the
+board (`background`), and the fixture guard allows only a colour there and
+no unknown field anywhere at the top of a copy (checked on a copy with a
+picture address in it).
+
+- Tests: Wordle's dark and light colours, the half-brightness line, a
+  bright green page, see-through elements, no colour at all, a board not yet
+  drawn; a switch on `<body>` or `<html>`, Firefox switching, the board
+  drawn late, saving once per change, stopping; the page script's theme
+  switch asks for no new hint; the popup's four cases.
+- Mutation checks, 18, each caught after two new tests (a bright green page;
+  the board observer after stopping). Percent opacity was deleted: computed
+  colours never use it.
+- **Recorded on the live page** (2026-10-30, the won game): Wordle's dark
+  theme puts `rgb(18, 18, 19)` behind the board, light puts white. Two saved
+  copies, `won-dark-theme` and `won-light`, each give the right panel theme
+  with Firefox light or dark (the recorded colour put behind the board).
+  Their notes were added afterwards (the recorder's were empty). A second
+  light recording, meant to be with Firefox dark, came out byte for byte the
+  same as the first, so it isn't kept; whether Wordle follows Firefox's dark
+  mode is checked on the live page in E10.
 
 ### E10. In Firefox, end to end
 - The manual checklist on the live page; the 1-second check (from a guess

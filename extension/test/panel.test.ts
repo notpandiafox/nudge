@@ -206,6 +206,25 @@ describe('the panel on the page', () => {
     expect(view(panel).text).toBe('This game is over.');
   });
 
+  test("dark or light, in Wordle's own colours, without redrawing the hint", () => {
+    const panel = createPanel(document, { random: () => 0 });
+    panel.show({ kind: 'hint', shroud: shroud('bions', rows) });
+    view(panel).button('Reveal a letter').click();
+    panel.setTheme('dark');
+    expect(panel.host.getAttribute('theme')).toBe('dark');
+    expect(view(panel).boxes).toEqual(['b', '', '', 'n', '']); // still the same hint
+    panel.setTheme('light');
+    expect(panel.host.getAttribute('theme')).toBe('light');
+    // jsdom doesn't compute styles, so check the two sets of colours.
+    const style = panel.host.shadowRoot!.querySelector('style')!.textContent!;
+    const block = (selector: string) =>
+      style.slice(style.indexOf(selector), style.indexOf('}', style.indexOf(selector)));
+    expect(block(':host {')).toMatch(/--page: #ffffff;.*--covered: #787c7e;.*--green: #6aaa64;/s);
+    expect(block(':host([theme="dark"])')).toMatch(
+      /--page: #121213;.*--covered: #3a3a3c;.*--green: #538d4e;/s,
+    );
+  });
+
   test('hide() closes it', () => {
     const panel = createPanel(document);
     panel.show({ kind: 'no-word' });

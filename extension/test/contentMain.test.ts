@@ -18,6 +18,11 @@ for (const [key, value] of Object.entries(fixture.storage)) {
 const sent: { type: string; strategy?: string }[] = [];
 let fromBackground: ((message: unknown) => void) | undefined;
 const storage = fakeStorage({ strategy: 'entropy' }); // saved in an earlier visit
+vi.stubGlobal('matchMedia', () => ({
+  matches: true, // Firefox is dark; this copy of the page has no colours of its own
+  addEventListener: () => {},
+  removeEventListener: () => {},
+}));
 vi.stubGlobal('browser', {
   storage,
   runtime: {
@@ -59,6 +64,20 @@ describe('the page script', () => {
       expect(panel().shadowRoot!.textContent).toContain("we don't know what the word is :C"),
     );
     expect(input('Entropy').checked).toBe(true);
+  });
+
+  test("sets the panel's theme and saves it for the popup", () => {
+    expect(panel().getAttribute('theme')).toBe('dark');
+    expect(storage.saved.theme).toBe('dark');
+  });
+
+  test("Wordle's theme switch changes the panel at once, and asks for no new hint", async () => {
+    const asked = sent.filter((message) => message.type === 'hint').length;
+    document.body.style.backgroundColor = '#ffffff';
+    await vi.waitFor(() => expect(panel().getAttribute('theme')).toBe('light'));
+    expect(storage.saved.theme).toBe('light');
+    await new Promise((settle) => setTimeout(settle, 20));
+    expect(sent.filter((message) => message.type === 'hint')).toHaveLength(asked);
   });
 
   test('the toolbar button shows and hides the panel', () => {

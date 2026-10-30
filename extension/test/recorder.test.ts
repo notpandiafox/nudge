@@ -145,7 +145,24 @@ describe('makeFixture', () => {
       note: 'mid-game, hard mode on',
       page: 'https://www.nytimes.com/games/wordle/index.html',
       boardHtml: '<div aria-label="Row 1"></div>',
+      background: null,
       storage: {},
     });
+  });
+
+  // For the dark-mode tests (plan E9): a colour value, nothing else from the page.
+  test('keeps the colour behind the board', () => {
+    const doc = new DOMParser().parseFromString(
+      '<body style="background-color: #121213"><div aria-label="Row 1"></div></body>',
+      'text/html',
+    );
+    const fixture = makeFixture({
+      document: doc,
+      storage: nytStorage({}),
+      href: 'https://www.nytimes.com/games/wordle/index.html',
+      note: 'dark theme',
+      now: new Date('2026-10-30T12:00:00Z'),
+    });
+    expect(fixture.background).toBe('rgb(18, 18, 19)');
   });
 });
