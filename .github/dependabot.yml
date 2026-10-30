@@ -1,11 +1,21 @@
 # Opens pull requests when a pinned version has an update (plan E-D12).
+# Cooldown: only versions at least 14 days old, the same rule as the first
+# install (a fresh release is the riskiest one).
 version: 2
 updates:
   - package-ecosystem: npm
     directory: /extension
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 14
+    ignore:
+      # typescript-eslint supports TypeScript below 6.1 only (plan E-D5).
+      - dependency-name: typescript
+        versions: ['>=6.1.0']
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 14

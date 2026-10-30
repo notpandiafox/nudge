@@ -136,6 +136,40 @@ One task per commit, like the solver's.
   a badly formatted file is stopped by the pre-commit hook, and CI is green
   (format, lint, type check, tests, coverage, `web-ext lint`).
 
+**Done in E1.** `extension/` builds, tests and packages, and CI's `extension`
+job is green on `main` (23 seconds: format, lint, type check, build, tests
+with the coverage gate, `web-ext lint`, package). `web-ext run` opens Firefox
+with nudge loaded (its button starts in Firefox's Extensions menu, the
+puzzle piece).
+
+- The manifest test came first: six checks of the privacy promises (only the
+  Wordle page, only storage, no data collected, WebAssembly but no `eval`)
+  and the version shared with `package.json`. Three mutations (an extra
+  permission, `unsafe-eval`, every site) each fail it.
+- **Firefox 142, not 128** (E-D4): 128 has been out of support since
+  September 2025, and the manifest's "collects no data" key needs 140 on
+  desktop and 142 on Android.
+- **TypeScript 6.0, not 7** (E-D5), and Dependabot ignores TypeScript 6.1 and
+  later: typescript-eslint supports below 6.1 only.
+- **Node 24** is required (`engines`): the current Vitest, jsdom and ESLint
+  don't run on Node 20, which is out of support.
+- **The pre-commit hook** is a script, not lint-staged (E-D12). Tested with a
+  separate git index, so the real staging area was never touched: badly
+  formatted TypeScript and C++ each stop the commit, the fixed files pass.
+  It calls Prettier and ESLint through Node, with no shell (Node 24 warns
+  about shell arguments). npm 11 blocks packages' install scripts, so the
+  hook is installed by `npm install`'s `prepare` step or by
+  `npx simple-git-hooks`.
+- **Installed versions** are exact and at least two weeks old
+  (`npm install --before`); Dependabot uses the same 14-day cooldown.
+  `npm audit fix` took the safe fixes; what's left (shell-quote, deepmerge)
+  is inside web-ext, a dev tool that never ships, and npm's only offer is a
+  years-old web-ext.
+- On Windows PowerShell, call npm as `npm.cmd` (`npm.cmd start`) unless
+  scripts are allowed (`Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`).
+- **Open:** the icon (`assets/nudge_icon.svg`) is 169 × 128; `web-ext lint`
+  warns that icons must be square. Fix before E10.
+
 ### E2. Saved copies of NYT's page
 - A small recorder (grown from the spike) that saves the board's HTML and
   the page's saved settings and game entries from the open Wordle tab.
