@@ -301,6 +301,24 @@ or strategy the reader should never send).
 - **Done when:** tests cover a probe hint whose letters break the greens, a
   hard-mode hint, and repeated "reveal a letter" until the word shows.
 
+**Done in E6.** `src/shroud.ts`: `shroud(hint, rows)` covers every box except
+where a finished row has a green **and** the hint has the same letter there;
+`revealLetter` uncovers one covered box at random (the random source is
+passed in, so tests are repeatable); `revealAll` uncovers everything. All
+three return a new shroud and leave the old one as it was.
+
+- Tested on moves from the native games: in hard mode the greens fit
+  (`bions` keeps the N that `crony` made green); a normal-mode probe breaks
+  them (`bumph` has a U where `tacit` made the A green, so nothing shows);
+  greens from several rows add up (`cover` after `rover`), yellows never
+  show. The colours themselves come from the tests' own feedback rule
+  (`test/reference.ts`), not from the solver.
+- "Reveal a letter" pressed five times on a fully covered hint uncovers one
+  new box each time, and does nothing once the word shows.
+- Mutation checks, each caught: any green shown whether it fits or not,
+  yellows shown, a reveal covering what was showing, a "reveal" landing on a
+  box already open.
+
 ### E7. The panel on the page
 - `panel.ts` and `main.ts`: draw each state (hint, "we don't know what the
   word is :C", "can't read the board" with the report link), open on page
