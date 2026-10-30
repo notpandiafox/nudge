@@ -268,6 +268,33 @@ decides.
 - **Done when:** with the real `nudge.mjs`, hints match the solver; fallback
   and impossible boards give "no word"; hard-mode hints pass rule B.
 
+**Done in E5.** The background script answers hint requests with the real
+solver. `answer()` (`src/background/solverHost.ts`) takes the finished rows,
+hard mode and strategy, and returns one of four answers (`src/messages.ts`):
+`hint`, `solved` (the last row is all green), `no-word` (fallback or an
+impossible board: "we don't know what the word is :C"), or `error` (a row
+or strategy the reader should never send).
+
+- **Tested with the real `nudge.mjs`** in Node: four whole games played the
+  way the extension will (one request per turn with every row so far) give
+  exactly the native solver's moves, minimax and entropy, normal and hard;
+  every hard-mode hint passes an independent rule-B checker
+  (`test/reference.ts`, the rules written again for the tests).
+- **A fresh solver per request, always deleted,** even when the solver
+  throws (then the answer is an `error`, never a thrown exception); a
+  counting stand-in proves no solver is left behind.
+- `main.ts` loads the solver **once**, on the first request, by its URL in the
+  extension (`import(browser.runtime.getURL('nudge.mjs'))`) instead of a fixed
+  import, so esbuild doesn't try to bundle it and a test can point it at the
+  real build. **A failed load** (found in the E5 review) is answered as an
+  `error`, like every other problem, and forgotten, so the next request tries
+  again instead of every hint failing until Firefox restarts the extension.
+- Mutation checks, each caught: the solver never deleted, fallback not
+  reported, an impossible board reported as an error, hard mode ignored, the
+  strategy ignored, the solver loaded on every request.
+- Vitest clears mock call records between tests here, so the "loaded once"
+  test records calls in a plain list instead of a mock.
+
 ### E6. The shroud
 - `shroud.ts`: the boxes with only the known greens that fit; reveal one
   random covered box; reveal all.
