@@ -72,7 +72,8 @@ extension/
 ├── package.json, package-lock.json, tsconfig.json, vitest.config.ts
 ├── build.mjs                    esbuild + copy nudge.mjs/nudge.wasm
 ├── src/
-│   ├── content/main.ts          wires the page: observe, read, ask, draw
+│   ├── content/main.ts          starts page.ts with the real page, storage and messaging
+│   ├── content/page.ts          the loop: observe, read, ask, draw
 │   ├── content/readBoard.ts     pure: Document → rows, or unreadable
 │   ├── content/readHardMode.ts  pure: saved data + rows on screen → hard mode, or unreadable
 │   ├── content/panel.ts         draws a panel state into the shadow root
@@ -324,6 +325,44 @@ three return a new shroud and leave the old one as it was.
   word is :C", "can't read the board" with the report link), open on page
   load and after each guess, stay quiet after a win or a loss.
 - **Done when:** jsdom tests drive each state from the saved copies.
+
+**Done in E7.** Three files. `src/content/panel.ts` only draws: one
+`<nudge-panel>` element with its own shadow root, so NYT's styles and nudge's
+never touch. It shows the shroud with "Reveal the hint" and "Reveal a letter",
+"we don't know what the word is :C", or "nudge can't read the board" with the
+report link and the reason (any other error, from the solver or from reaching
+the background script, says "nudge ran into a problem." instead, with the same
+link); a × closes it. All text is set as text, never as
+markup. `src/content/page.ts` is the loop: it reads the board on start and on
+every change to the page (a `MutationObserver` on rows and tile colours), and
+only when the finished rows differ from the last ones does it read hard mode,
+ask the background script, and open the panel. `src/content/main.ts` starts it
+with the real page, NYT's saved data and `browser.runtime.sendMessage`.
+
+- Tested with the saved copies, the real panel and the real solver standing
+  in for the background script: the opener on an empty board, hard mode sent
+  with the request, the mid-game hint, nothing asked on a won or lost board,
+  the unreadable board's message with "Row 2, tile 1", and unreadable hard
+  mode. Guesses are played into row 4 the way NYT does it (the tiles turn
+  over in place), using the won game's own rows: `troop` brings a new hint
+  and reopens a closed panel; `motor` (a win) closes it and asks nothing.
+  Typing changes nothing; an answer for an older board is dropped; a board
+  drawn late is waited for (5 s), and one that never comes is reported.
+- Found while writing it: `:host { all: initial }` in the panel's style
+  outranks the browser's own rule for `[hidden]`, so the panel would never
+  hide; it now has its own `:host([hidden])` rule (pinned by a test). And
+  `readBoard` now exports its "no Row elements" reason, which the loop treats
+  as "not drawn yet" until the wait is over.
+- In jsdom tests, Vitest can't import the solver from outside `extension/`,
+  so `page.test.ts` loads it with Node's own `require`.
+- Mutation checks, each caught: asking again when the finished rows haven't
+  changed, drawing a late answer for an older board, missing the win or the
+  loss, never hiding, losing the error text, not waiting for the board,
+  never giving up waiting, ignoring or hiding unreadable hard mode, and not
+  watching for new rows.
+- Left for E9 in Firefox: NYT may save the new row a moment after the tiles
+  turn over; if the saved settings disagree in that moment, the panel would
+  say it can't read hard mode.
 
 ### E8. Toolbar button and switches
 - The per-tab button behavior, the "Nudge" popup, the two switches,

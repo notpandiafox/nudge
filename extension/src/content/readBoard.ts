@@ -13,6 +13,9 @@ export interface Row {
 
 export type BoardReading = { readable: true; rows: Row[] } | { readable: false; reason: string };
 
+// Also what the page looks like before NYT has drawn the board.
+export const NO_ROWS = 'no "Row" elements on the page';
+
 const COLOURS: Record<string, string> = { correct: 'G', present: 'Y', absent: 'X' };
 // A tile with no colour yet: an empty row, or a guess still being typed.
 const UNFINISHED = new Set(['empty', 'tbd']);
@@ -25,7 +28,7 @@ const SPOKEN: Record<string, string> = {
 
 export function readBoard(document: Document): BoardReading {
   const rowElements = [...document.querySelectorAll('[aria-label^="Row "]')];
-  if (rowElements.length === 0) return { readable: false, reason: 'no "Row" elements on the page' };
+  if (rowElements.length === 0) return { readable: false, reason: NO_ROWS };
 
   const rows: Row[] = [];
   for (const rowElement of rowElements) {
