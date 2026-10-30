@@ -24,3 +24,4 @@ spike/firefox/nudge.wasm
 # The extension's build output (extension/build.mjs, web-ext)
 extension/dist/
 extension/web-ext-artifacts/
+extension/dist-recorder/

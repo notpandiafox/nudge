@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "nudge recorder (developer tool)",
+  "version": "0.1.0",
+  "description": "Saves test copies of the Wordle board for nudge's tests. Never shipped.",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "nudge-recorder@notpandiafox",
+      "strict_min_version": "142.0",
+      "data_collection_permissions": { "required": ["none"] }
+    }
+  },
+  "action": { "default_title": "Record this Wordle board", "default_popup": "popup.html" },
+  "content_scripts": [
+    {
+      "matches": ["https://www.nytimes.com/games/wordle/*"],
+      "js": ["content.js"]
+    }
+  ],
+  "host_permissions": ["https://www.nytimes.com/games/wordle/*"]
+}

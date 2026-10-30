@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>nudge recorder</title>
+    <style>
+      body {
+        font:
+          13px system-ui,
+          sans-serif;
+        width: 380px;
+        margin: 10px;
+      }
+      input,
+      textarea {
+        width: 100%;
+        box-sizing: border-box;
+      }
+      textarea {
+        height: 160px;
+        font: 11px monospace;
+      }
+      .problem {
+        color: #c62828;
+      }
+    </style>
+  </head>
+  <body>
+    <label for="note">What this board shows (for example "mid-game, hard mode on")</label>
+    <input id="note" autocomplete="off" />
+    <p><button id="record">Record this board</button> <a id="save" hidden>Save the copy</a></p>
+    <p id="status"></p>
+    <textarea id="copy" readonly aria-label="The recorded copy"></textarea>
+    <script src="popup.js"></script>
+  </body>
+</html>

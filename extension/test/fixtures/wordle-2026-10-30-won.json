@@ -1,0 +1,58 @@
+{
+  "recordedOn": "2026-10-30",
+  "note": "won in 6 (answer motor), hard mode off",
+  "page": "https://www.nytimes.com/games/wordle/index.html",
+  "boardHtml": "<div class=\"Row-module_row__pwpBq\" style=\"grid-template-columns: repeat(5, 1fr);\" role=\"group\" aria-label=\"Row 1\"><div class=\"\" style=\"animation-delay: 0ms;\"><div class=\"Tile-module_tile__UWEHN\" role=\"img\" aria-roledescription=\"tile\" aria-label=\"1st letter, A, absent\" data-state=\"absent\" data-animation=\"idle\" data-testid=\"tile\" aria-live=\"polite\">a</div></div><div class=\"\" style=\"animation-delay: 100ms;\"><div class=\"Tile-module_tile__UWEHN\" role=\"img\" aria-roledescription=\"tile\" aria-label=\"2nd letter, D, absent\" data-state=\"absent\" data-animation=\"idle\" data-testid=\"tile\" aria-live=\"polite\">d</div></div><div class=\"\" style=\"animation-delay: 200ms;\"><div class=\"Tile-module_tile__UWEHN\" role=\"img\" aria-roledescription=\"tile\" aria-label=\"3rd letter, I, absent\" data-state=\"absent\" data-animation=\"idle\" data-testid=\"tile\" aria-live=\"polite\">i</div></div><div class=\"\" style=\"animation-delay: 300ms;\"><div class=\"Tile-module_tile__UWEHN\" role=\"img\" aria-roledescription=\"tile\" aria-label=\"4th letter, E, absent\" data-state=\"absent\" data-animation=\"idle\" data-testid=\"tile\" aria-live=\"polite\">e</div></div><div class=\"\" style=\"animation-delay: 400ms;\"><div class=\"Tile-module_tile__UWEHN\" role=\"img\" aria-roledescription=\"tile\" aria-label=\"5th letter, U, absent\" data-state=\"absent\" data-animation=\"idle\" data-testid=\"tile\" aria-live=\"polite\">u</div></div></div>\n<div class=\"Row-module_row__pwpBq\" style=\"grid-template-columns: repeat(5, 1fr);\" role=\"group\" aria-label=\"Row 2\"><div class=\"\" style=\"animation-delay: 0ms;\"><div class=\"Tile-module_tile__UWEHN\" role=\"img\" aria-roledescription=\"tile\" aria-label=\"1st letter, S, absent\" data-state=\"absent\" data-animation=\"idle\" data-testid=\"tile\" aria-live=\"polite\">s</div></div><div class=\"\" style=\"animation-delay: 100ms;\"><div class=\"Tile-module_tile__UWEHN\" role=\"img\" aria-roledescription=\"tile\" aria-label=\"2nd letter, T, present in another position\" data-state=\"present\" data-animation=\"idle\" data-testid=\"tile\" aria-live=\"polite\">t</div></div><div class=\"\" style=\"animation-delay: 200ms;\"><div class=\"Tile-module_tile__UWEHN\" role=\"img\" aria-roledescription=\"tile\" aria-label=\"3rd letter, R, present in another position\" data-state=\"present\" data-animation=\"idle\" data-testid=\"tile\" aria-live=\"polite\">r</div></div><div class=\"\" style=\"animation-delay: 300ms;\"><div class=\"Tile-module_tile__UWEHN\" role=\"img\" aria-roledescription=\"tile\" aria-label=\"4th letter, O, correct\" data-state=\"correct\" data-animation=\"idle\" data-testid=\"tile\" aria-live=\"polite\">o</div></div><div class=\"\" style=\"animation-delay: 400ms;\"><div class=\"Tile-module_tile__UWEHN\" role=\"img\" aria-roledescription=\"tile\" aria-label=\"5th letter, W, absent\" data-state=\"absent\" data-animation=\"idle\" data-testid=\"tile\" aria-live=\"polite\">w</div></div></div>\n<div class=\"Row-module_row__pwpBq\" style=\"grid-template-columns: repeat(5, 1fr);\" role=\"group\" aria-label=\"Row 3\"><div class=\"\" style=\"animation-delay: 0ms;\"><div class=\"Tile-module_tile__UWEHN\" role=\"img\" aria-roledescription=\"tile\" aria-label=\"1st letter, S, absent\" data-state=\"absent\" data-animation=\"idle\" data-testid=\"tile\" aria-live=\"polite\">s</div></div><div class=\"\" style=\"animation-delay: 100ms;\"><div class=\"Tile-module_tile__UWEHN\" role=\"img\" aria-roledescription=\"tile\" aria-label=\"2nd letter, M, present in another position\" data-state=\"present\" data-animation=\"idle\" data-testid=\"tile\" aria-live=\"polite\">m</div></div><div class=\"\" style=\"animation-delay: 200ms;\"><div class=\"Tile-module_tile__UWEHN\" role=\"img\" aria-roledescription=\"tile\" aria-label=\"3rd letter, A, absent\" data-state=\"absent\" data-animation=\"idle\" data-testid=\"tile\" aria-live=\"polite\">a</div></div><div class=\"\" style=\"animation-delay: 300ms;\"><div class=\"Tile-module_tile__UWEHN\" role=\"img\" aria-roledescription=\"tile\" aria-label=\"4th letter, R, present in another position\" data-state=\"present\" data-animation=\"idle\" data-testid=\"tile\" aria-live=\"polite\">r</div></div><div class=\"\" style=\"animation-delay: 400ms;\"><div class=\"Tile-module_tile__UWEHN\" role=\"img\" aria-roledescription=\"tile\" aria-label=\"5th letter, T, present in another position\" data-state=\"present\" data-animation=\"idle\" data-testid=\"tile\" aria-live=\"polite\">t</div></div></div>\n<div class=\"Row-module_row__pwpBq\" style=\"grid-template-columns: repeat(5, 1fr);\" role=\"group\" aria-label=\"Row 4\"><div class=\"\" style=\"animation-delay: 0ms;\"><div class=\"Tile-module_tile__UWEHN\" role=\"img\" aria-roledescription=\"tile\" aria-label=\"1st letter, T, present in another position\" data-state=\"present\" data-animation=\"idle\" data-testid=\"tile\" aria-live=\"polite\">t</div></div><div class=\"\" style=\"animation-delay: 100ms;\"><div class=\"Tile-module_tile__UWEHN\" role=\"img\" aria-roledescription=\"tile\" aria-label=\"2nd letter, R, present in another position\" data-state=\"present\" data-animation=\"idle\" data-testid=\"tile\" aria-live=\"polite\">r</div></div><div class=\"\" style=\"animation-delay: 200ms;\"><div class=\"Tile-module_tile__UWEHN\" role=\"img\" aria-roledescription=\"tile\" aria-label=\"3rd letter, O, present in another position\" data-state=\"present\" data-animation=\"idle\" data-testid=\"tile\" aria-live=\"polite\">o</div></div><div class=\"\" style=\"animation-delay: 300ms;\"><div class=\"Tile-module_tile__UWEHN\" role=\"img\" aria-roledescription=\"tile\" aria-label=\"4th letter, O, correct\" data-state=\"correct\" data-animation=\"idle\" data-testid=\"tile\" aria-live=\"polite\">o</div></div><div class=\"\" style=\"animation-delay: 400ms;\"><div class=\"Tile-module_tile__UWEHN\" role=\"img\" aria-roledescription=\"tile\" aria-label=\"5th letter, P, absent\" data-state=\"absent\" data-animation=\"idle\" data-testid=\"tile\" aria-live=\"polite\">p</div></div></div>\n<div class=\"Row-module_row__pwpBq\" style=\"grid-template-columns: repeat(5, 1fr);\" role=\"group\" aria-label=\"Row 5\"><div class=\"\" style=\"animation-delay: 0ms;\"><div class=\"Tile-module_tile__UWEHN\" role=\"img\" aria-roledescription=\"tile\" aria-label=\"1st letter, M, correct\" data-state=\"correct\" data-animation=\"idle\" data-testid=\"tile\" aria-live=\"polite\">m</div></div><div class=\"\" style=\"animation-delay: 100ms;\"><div class=\"Tile-module_tile__UWEHN\" role=\"img\" aria-roledescription=\"tile\" aria-label=\"2nd letter, O, correct\" data-state=\"correct\" data-animation=\"idle\" data-testid=\"tile\" aria-live=\"polite\">o</div></div><div class=\"\" style=\"animation-delay: 200ms;\"><div class=\"Tile-module_tile__UWEHN\" role=\"img\" aria-roledescription=\"tile\" aria-label=\"3rd letter, T, correct\" data-state=\"correct\" data-animation=\"idle\" data-testid=\"tile\" aria-live=\"polite\">t</div></div><div class=\"\" style=\"animation-delay: 300ms;\"><div class=\"Tile-module_tile__UWEHN\" role=\"img\" aria-roledescription=\"tile\" aria-label=\"4th letter, T, absent\" data-state=\"absent\" data-animation=\"idle\" data-testid=\"tile\" aria-live=\"polite\">t</div></div><div class=\"\" style=\"animation-delay: 400ms;\"><div class=\"Tile-module_tile__UWEHN\" role=\"img\" aria-roledescription=\"tile\" aria-label=\"5th letter, S, absent\" data-state=\"absent\" data-animation=\"idle\" data-testid=\"tile\" aria-live=\"polite\">s</div></div></div>\n<div class=\"Row-module_row__pwpBq\" style=\"grid-template-columns: repeat(5, 1fr);\" role=\"group\" aria-label=\"Row 6\"><div class=\"\" style=\"animation-delay: 0ms;\"><div class=\"Tile-module_tile__UWEHN\" role=\"img\" aria-roledescription=\"tile\" aria-label=\"1st letter, M, correct\" data-state=\"correct\" data-animation=\"idle\" data-testid=\"tile\" aria-live=\"polite\">m</div></div><div class=\"\" style=\"animation-delay: 100ms;\"><div class=\"Tile-module_tile__UWEHN\" role=\"img\" aria-roledescription=\"tile\" aria-label=\"2nd letter, O, correct\" data-state=\"correct\" data-animation=\"idle\" data-testid=\"tile\" aria-live=\"polite\">o</div></div><div class=\"\" style=\"animation-delay: 200ms;\"><div class=\"Tile-module_tile__UWEHN\" role=\"img\" aria-roledescription=\"tile\" aria-label=\"3rd letter, T, correct\" data-state=\"correct\" data-animation=\"idle\" data-testid=\"tile\" aria-live=\"polite\">t</div></div><div class=\"\" style=\"animation-delay: 300ms;\"><div class=\"Tile-module_tile__UWEHN\" role=\"img\" aria-roledescription=\"tile\" aria-label=\"4th letter, O, correct\" data-state=\"correct\" data-animation=\"idle\" data-testid=\"tile\" aria-live=\"polite\">o</div></div><div class=\"\" style=\"animation-delay: 400ms;\"><div class=\"Tile-module_tile__UWEHN\" role=\"img\" aria-roledescription=\"tile\" aria-label=\"5th letter, R, correct\" data-state=\"correct\" data-animation=\"idle\" data-testid=\"tile\" aria-live=\"polite\">r</div></div></div>",
+  "storage": {
+    "games-state-wordleV2/10000001": {
+      "states": [
+        {
+          "puzzleId": "678",
+          "data": {
+            "currentRowIndex": 5,
+            "status": "WIN",
+            "hardMode": false
+          },
+          "schemaVersion": "0.22.0"
+        }
+      ]
+    },
+    "games-settings-wordleV2/10000001": {
+      "states": [
+        {
+          "puzzleId": "settings",
+          "data": {
+            "schemaVersion": "0.18.1",
+            "hardMode": false
+          },
+          "schemaVersion": "0.22.0"
+        }
+      ]
+    },
+    "games-settings-wordleV2/ANON": {
+      "states": [
+        {
+          "puzzleId": "settings",
+          "data": {
+            "schemaVersion": "0.52.0",
+            "hardMode": false
+          },
+          "schemaVersion": "0.52.0"
+        }
+      ]
+    },
+    "games-state-wordleV2/ANON": {
+      "states": [
+        {
+          "puzzleId": "3616",
+          "data": {
+            "currentRowIndex": 6,
+            "status": "WIN",
+            "hardMode": false
+          },
+          "schemaVersion": "0.52.0"
+        }
+      ]
+    }
+  }
+}

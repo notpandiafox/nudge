@@ -10,6 +10,7 @@
   "scripts": {
     "build": "node build.mjs",
     "start": "web-ext run --source-dir dist",
+    "recorder": "web-ext run --source-dir dist-recorder --start-url https://www.nytimes.com/games/wordle/index.html",
     "test": "vitest run --coverage",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",

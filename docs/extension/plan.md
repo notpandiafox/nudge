@@ -178,6 +178,35 @@ puzzle piece).
   label disagrees (unreadable).
 - **Done when:** the copies are committed with account numbers replaced.
 
+**Done in E2.** Six saved copies of NYT's page are in
+`extension/test/fixtures/`, recorded on 2026-10-30 from the developer's
+Firefox: empty board with hard mode off and on, mid-game (3 guesses), won in
+6, and two edited from those (lost: last row changed and status `FAIL`;
+unreadable: one tile's letter disagrees with its label). Edited copies say so
+in their note.
+
+- **The recorder** (`extension/recorder/`, built into `dist-recorder/`, never
+  shipped) saves the rows and their tiles, and from NYT's saved data only the
+  two Wordle entries, by allowlist: `hardMode`, `currentRowIndex`, `status`,
+  `puzzleId`, `schemaVersion`. Guesses, answers, stats and anything unknown
+  are dropped; account numbers become fake ones (`10000001`, …).
+- **Found while testing it:** saving "the smallest element holding every row"
+  can be the whole page (with names, menus and an email address); it now
+  saves the rows only, and a test pins that case.
+- **A second, independent guard** (`test/fixtures.test.ts`) checks every
+  committed copy: only the two entries with fake numbers, no field outside
+  the allowlist, no account-like number or email anywhere. Checked on a
+  deliberately leaky copy (fails all three privacy checks) and a clean one
+  (passes); that check first caught the guard itself being too strict.
+- **For E4, from the real data:** the signed-in entry held an *old* game
+  (another puzzle, won, 5 rows) while today's game was in `ANON`. So the
+  matching rule (the entry whose rows match the board) is needed for real,
+  and these copies test it: today's entry says 0, 3 or 6 rows, the old one
+  always 5.
+- Recording needs the developer's normal Firefox (Load Temporary Add-on, from
+  `dist-recorder/manifest.json`): `web-ext run` starts a fresh profile with
+  no saved games.
+
 ### E3. Board reader
 - `readBoard`: rows, or unreadable (spec, "Reading the board").
 - **Done when:** every copy reads exactly; the edited copy is unreadable.

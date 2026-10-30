@@ -1,0 +1,58 @@
+{
+  "recordedOn": "2026-10-30",
+  "note": "empty board, hard mode on",
+  "page": "https://www.nytimes.com/games/wordle/index.html",
+  "boardHtml": "<div class=\"Row-module_row__pwpBq\" style=\"grid-template-columns: repeat(5, 1fr);\" role=\"group\" aria-label=\"Row 1\"><div class=\"\" style=\"animation-delay: 0ms;\"><div class=\"Tile-module_tile__UWEHN\" role=\"img\" aria-roledescription=\"tile\" aria-label=\"1st letter, empty\" data-state=\"empty\" data-animation=\"idle\" data-testid=\"tile\" aria-live=\"off\"></div></div><div class=\"\" style=\"animation-delay: 100ms;\"><div class=\"Tile-module_tile__UWEHN\" role=\"img\" aria-roledescription=\"tile\" aria-label=\"2nd letter, empty\" data-state=\"empty\" data-animation=\"idle\" data-testid=\"tile\" aria-live=\"off\"></div></div><div class=\"\" style=\"animation-delay: 200ms;\"><div class=\"Tile-module_tile__UWEHN\" role=\"img\" aria-roledescription=\"tile\" aria-label=\"3rd letter, empty\" data-state=\"empty\" data-animation=\"idle\" data-testid=\"tile\" aria-live=\"off\"></div></div><div class=\"\" style=\"animation-delay: 300ms;\"><div class=\"Tile-module_tile__UWEHN\" role=\"img\" aria-roledescription=\"tile\" aria-label=\"4th letter, empty\" data-state=\"empty\" data-animation=\"idle\" data-testid=\"tile\" aria-live=\"off\"></div></div><div class=\"\" style=\"animation-delay: 400ms;\"><div class=\"Tile-module_tile__UWEHN\" role=\"img\" aria-roledescription=\"tile\" aria-label=\"5th letter, empty\" data-state=\"empty\" data-animation=\"idle\" data-testid=\"tile\" aria-live=\"off\"></div></div></div>\n<div class=\"Row-module_row__pwpBq\" style=\"grid-template-columns: repeat(5, 1fr);\" role=\"group\" aria-label=\"Row 2\"><div class=\"\" style=\"animation-delay: 0ms;\"><div class=\"Tile-module_tile__UWEHN\" role=\"img\" aria-roledescription=\"tile\" aria-label=\"1st letter, empty\" data-state=\"empty\" data-animation=\"idle\" data-testid=\"tile\" aria-live=\"off\"></div></div><div class=\"\" style=\"animation-delay: 100ms;\"><div class=\"Tile-module_tile__UWEHN\" role=\"img\" aria-roledescription=\"tile\" aria-label=\"2nd letter, empty\" data-state=\"empty\" data-animation=\"idle\" data-testid=\"tile\" aria-live=\"off\"></div></div><div class=\"\" style=\"animation-delay: 200ms;\"><div class=\"Tile-module_tile__UWEHN\" role=\"img\" aria-roledescription=\"tile\" aria-label=\"3rd letter, empty\" data-state=\"empty\" data-animation=\"idle\" data-testid=\"tile\" aria-live=\"off\"></div></div><div class=\"\" style=\"animation-delay: 300ms;\"><div class=\"Tile-module_tile__UWEHN\" role=\"img\" aria-roledescription=\"tile\" aria-label=\"4th letter, empty\" data-state=\"empty\" data-animation=\"idle\" data-testid=\"tile\" aria-live=\"off\"></div></div><div class=\"\" style=\"animation-delay: 400ms;\"><div class=\"Tile-module_tile__UWEHN\" role=\"img\" aria-roledescription=\"tile\" aria-label=\"5th letter, empty\" data-state=\"empty\" data-animation=\"idle\" data-testid=\"tile\" aria-live=\"off\"></div></div></div>\n<div class=\"Row-module_row__pwpBq\" style=\"grid-template-columns: repeat(5, 1fr);\" role=\"group\" aria-label=\"Row 3\"><div class=\"\" style=\"animation-delay: 0ms;\"><div class=\"Tile-module_tile__UWEHN\" role=\"img\" aria-roledescription=\"tile\" aria-label=\"1st letter, empty\" data-state=\"empty\" data-animation=\"idle\" data-testid=\"tile\" aria-live=\"off\"></div></div><div class=\"\" style=\"animation-delay: 100ms;\"><div class=\"Tile-module_tile__UWEHN\" role=\"img\" aria-roledescription=\"tile\" aria-label=\"2nd letter, empty\" data-state=\"empty\" data-animation=\"idle\" data-testid=\"tile\" aria-live=\"off\"></div></div><div class=\"\" style=\"animation-delay: 200ms;\"><div class=\"Tile-module_tile__UWEHN\" role=\"img\" aria-roledescription=\"tile\" aria-label=\"3rd letter, empty\" data-state=\"empty\" data-animation=\"idle\" data-testid=\"tile\" aria-live=\"off\"></div></div><div class=\"\" style=\"animation-delay: 300ms;\"><div class=\"Tile-module_tile__UWEHN\" role=\"img\" aria-roledescription=\"tile\" aria-label=\"4th letter, empty\" data-state=\"empty\" data-animation=\"idle\" data-testid=\"tile\" aria-live=\"off\"></div></div><div class=\"\" style=\"animation-delay: 400ms;\"><div class=\"Tile-module_tile__UWEHN\" role=\"img\" aria-roledescription=\"tile\" aria-label=\"5th letter, empty\" data-state=\"empty\" data-animation=\"idle\" data-testid=\"tile\" aria-live=\"off\"></div></div></div>\n<div class=\"Row-module_row__pwpBq\" style=\"grid-template-columns: repeat(5, 1fr);\" role=\"group\" aria-label=\"Row 4\"><div class=\"\" style=\"animation-delay: 0ms;\"><div class=\"Tile-module_tile__UWEHN\" role=\"img\" aria-roledescription=\"tile\" aria-label=\"1st letter, empty\" data-state=\"empty\" data-animation=\"idle\" data-testid=\"tile\" aria-live=\"off\"></div></div><div class=\"\" style=\"animation-delay: 100ms;\"><div class=\"Tile-module_tile__UWEHN\" role=\"img\" aria-roledescription=\"tile\" aria-label=\"2nd letter, empty\" data-state=\"empty\" data-animation=\"idle\" data-testid=\"tile\" aria-live=\"off\"></div></div><div class=\"\" style=\"animation-delay: 200ms;\"><div class=\"Tile-module_tile__UWEHN\" role=\"img\" aria-roledescription=\"tile\" aria-label=\"3rd letter, empty\" data-state=\"empty\" data-animation=\"idle\" data-testid=\"tile\" aria-live=\"off\"></div></div><div class=\"\" style=\"animation-delay: 300ms;\"><div class=\"Tile-module_tile__UWEHN\" role=\"img\" aria-roledescription=\"tile\" aria-label=\"4th letter, empty\" data-state=\"empty\" data-animation=\"idle\" data-testid=\"tile\" aria-live=\"off\"></div></div><div class=\"\" style=\"animation-delay: 400ms;\"><div class=\"Tile-module_tile__UWEHN\" role=\"img\" aria-roledescription=\"tile\" aria-label=\"5th letter, empty\" data-state=\"empty\" data-animation=\"idle\" data-testid=\"tile\" aria-live=\"off\"></div></div></div>\n<div class=\"Row-module_row__pwpBq\" style=\"grid-template-columns: repeat(5, 1fr);\" role=\"group\" aria-label=\"Row 5\"><div class=\"\" style=\"animation-delay: 0ms;\"><div class=\"Tile-module_tile__UWEHN\" role=\"img\" aria-roledescription=\"tile\" aria-label=\"1st letter, empty\" data-state=\"empty\" data-animation=\"idle\" data-testid=\"tile\" aria-live=\"off\"></div></div><div class=\"\" style=\"animation-delay: 100ms;\"><div class=\"Tile-module_tile__UWEHN\" role=\"img\" aria-roledescription=\"tile\" aria-label=\"2nd letter, empty\" data-state=\"empty\" data-animation=\"idle\" data-testid=\"tile\" aria-live=\"off\"></div></div><div class=\"\" style=\"animation-delay: 200ms;\"><div class=\"Tile-module_tile__UWEHN\" role=\"img\" aria-roledescription=\"tile\" aria-label=\"3rd letter, empty\" data-state=\"empty\" data-animation=\"idle\" data-testid=\"tile\" aria-live=\"off\"></div></div><div class=\"\" style=\"animation-delay: 300ms;\"><div class=\"Tile-module_tile__UWEHN\" role=\"img\" aria-roledescription=\"tile\" aria-label=\"4th letter, empty\" data-state=\"empty\" data-animation=\"idle\" data-testid=\"tile\" aria-live=\"off\"></div></div><div class=\"\" style=\"animation-delay: 400ms;\"><div class=\"Tile-module_tile__UWEHN\" role=\"img\" aria-roledescription=\"tile\" aria-label=\"5th letter, empty\" data-state=\"empty\" data-animation=\"idle\" data-testid=\"tile\" aria-live=\"off\"></div></div></div>\n<div class=\"Row-module_row__pwpBq\" style=\"grid-template-columns: repeat(5, 1fr);\" role=\"group\" aria-label=\"Row 6\"><div class=\"\" style=\"animation-delay: 0ms;\"><div class=\"Tile-module_tile__UWEHN\" role=\"img\" aria-roledescription=\"tile\" aria-label=\"1st letter, empty\" data-state=\"empty\" data-animation=\"idle\" data-testid=\"tile\" aria-live=\"off\"></div></div><div class=\"\" style=\"animation-delay: 100ms;\"><div class=\"Tile-module_tile__UWEHN\" role=\"img\" aria-roledescription=\"tile\" aria-label=\"2nd letter, empty\" data-state=\"empty\" data-animation=\"idle\" data-testid=\"tile\" aria-live=\"off\"></div></div><div class=\"\" style=\"animation-delay: 200ms;\"><div class=\"Tile-module_tile__UWEHN\" role=\"img\" aria-roledescription=\"tile\" aria-label=\"3rd letter, empty\" data-state=\"empty\" data-animation=\"idle\" data-testid=\"tile\" aria-live=\"off\"></div></div><div class=\"\" style=\"animation-delay: 300ms;\"><div class=\"Tile-module_tile__UWEHN\" role=\"img\" aria-roledescription=\"tile\" aria-label=\"4th letter, empty\" data-state=\"empty\" data-animation=\"idle\" data-testid=\"tile\" aria-live=\"off\"></div></div><div class=\"\" style=\"animation-delay: 400ms;\"><div class=\"Tile-module_tile__UWEHN\" role=\"img\" aria-roledescription=\"tile\" aria-label=\"5th letter, empty\" data-state=\"empty\" data-animation=\"idle\" data-testid=\"tile\" aria-live=\"off\"></div></div></div>",
+  "storage": {
+    "games-state-wordleV2/10000001": {
+      "states": [
+        {
+          "puzzleId": "678",
+          "data": {
+            "currentRowIndex": 5,
+            "status": "WIN",
+            "hardMode": false
+          },
+          "schemaVersion": "0.22.0"
+        }
+      ]
+    },
+    "games-settings-wordleV2/10000001": {
+      "states": [
+        {
+          "puzzleId": "settings",
+          "data": {
+            "schemaVersion": "0.18.1",
+            "hardMode": false
+          },
+          "schemaVersion": "0.22.0"
+        }
+      ]
+    },
+    "games-settings-wordleV2/ANON": {
+      "states": [
+        {
+          "puzzleId": "settings",
+          "data": {
+            "schemaVersion": "0.52.0",
+            "hardMode": true
+          },
+          "schemaVersion": "0.52.0"
+        }
+      ]
+    },
+    "games-state-wordleV2/ANON": {
+      "states": [
+        {
+          "puzzleId": "3616",
+          "data": {
+            "currentRowIndex": 0,
+            "status": "IN_PROGRESS",
+            "hardMode": true
+          },
+          "schemaVersion": "0.52.0"
+        }
+      ]
+    }
+  }
+}

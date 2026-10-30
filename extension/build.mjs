@@ -41,3 +41,17 @@ await copyFile('../assets/nudge_icon.svg', 'dist/icons/nudge.svg');
 for (const file of solverFiles) {
   await copyFile(`${solverDir}/${file}`, `dist/${file}`);
 }
+
+// The recorder (plan E2), a separate developer extension that is never shipped.
+await rm('dist-recorder', { recursive: true, force: true });
+await mkdir('dist-recorder', { recursive: true });
+for (const entry of ['content', 'popup']) {
+  await build({
+    ...shared,
+    entryPoints: [`recorder/${entry}.ts`],
+    outfile: `dist-recorder/${entry}.js`,
+    format: 'iife',
+  });
+}
+await copyFile('recorder/manifest.json', 'dist-recorder/manifest.json');
+await copyFile('recorder/popup.html', 'dist-recorder/popup.html');

@@ -3,7 +3,7 @@ import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
-  { ignores: ['dist/', 'coverage/', 'web-ext-artifacts/', 'node_modules/'] },
+  { ignores: ['dist/', 'dist-recorder/', 'coverage/', 'web-ext-artifacts/', 'node_modules/'] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   // The build and hook scripts run in Node.
