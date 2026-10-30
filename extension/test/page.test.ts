@@ -8,8 +8,9 @@ import { afterEach, describe, expect, test, vi } from 'vitest';
 
 import { answer, type SolverModule } from '../src/background/solverHost';
 import type { HintRequest, HintResponse } from '../src/messages';
-import { watchPage } from '../src/content/page';
+import { watchPage, type Page } from '../src/content/page';
 import { createPanel } from '../src/content/panel';
+import { DEFAULTS, type Settings } from '../src/settings';
 import { shroud } from '../src/shroud';
 
 const solverDir = process.env.NUDGE_WASM_DIR ?? '../build-wasm/solver/wasm';
@@ -31,24 +32,25 @@ function storageOf(entries: Record<string, unknown>) {
   };
 }
 
-let stop: (() => void) | undefined;
-afterEach(() => stop?.());
+let running: Page | undefined;
+afterEach(() => running?.stop());
 
 // Opens a saved copy and starts nudge on it, with the real solver answering.
 function open(
   name: string,
   ask?: (request: HintRequest) => Promise<HintResponse>,
   storage = saved(name).storage,
+  settings: Settings = DEFAULTS,
 ) {
   const fixture = saved(name);
   document.body.innerHTML = `<main>${fixture.boardHtml}</main>`;
   const requests: HintRequest[] = [];
   const panel = createPanel(document);
-  stop = watchPage({
+  running = watchPage({
     document,
     storage: storageOf(storage),
     panel,
-    strategy: 'minimax',
+    settings,
     ask: (request) => {
       requests.push(request);
       return ask ? ask(request) : Promise.resolve(answer(nudge, request));
@@ -58,6 +60,7 @@ function open(
   return {
     requests,
     panel,
+    watcher: running,
     boxes: () => [...shadow().querySelectorAll('.box')].map((box) => box.textContent),
     text: () => shadow().querySelector('.body')!.textContent,
     close: () => shadow().querySelector<HTMLButtonElement>('[aria-label="Close"]')!.click(),
@@ -187,6 +190,8 @@ describe('the other answers', () => {
     await vi.waitFor(() => expect(page.requests).toHaveLength(1));
     await new Promise((settle) => setTimeout(settle, 20));
     expect(page.panel.host.hidden).toBe(true);
+    page.panel.toggle();
+    expect(page.text()).toBe('This game is over.');
   });
 
   test('unreadable hard mode: says so, asks the solver nothing', async () => {
@@ -214,16 +219,86 @@ describe('the other answers', () => {
   });
 });
 
+describe('the switches', () => {
+  const autoOff = { ...DEFAULTS, autoPanel: false };
+  const settle = () => new Promise((done) => setTimeout(done, 20));
+
+  test('"open after each guess" off: the hint is ready, and waits for the button', async () => {
+    const page = open('mid-game', undefined, saved('mid-game').storage, autoOff);
+    await vi.waitFor(() => expect(page.requests).toHaveLength(1));
+    await settle();
+    expect(page.panel.host.hidden).toBe(true);
+    page.panel.toggle();
+    expect(page.boxes()).toHaveLength(5);
+    page.close();
+    guess(troop!);
+    await vi.waitFor(() => expect(page.requests).toHaveLength(2));
+    await settle();
+    expect(page.panel.host.hidden).toBe(true);
+  });
+
+  test('"open after each guess" off: an unreadable board waits for the button too', async () => {
+    const page = open('unreadable-edited', undefined, saved('unreadable-edited').storage, autoOff);
+    await settle();
+    expect(page.panel.host.hidden).toBe(true);
+    page.panel.toggle();
+    expect(page.text()).toContain("nudge can't read the board");
+  });
+
+  test('a new strategy gives a new hint at once, and leaves a closed panel closed', async () => {
+    const page = open('empty-hard-off');
+    await vi.waitFor(() => expect(page.boxes()).toHaveLength(5));
+    page.close();
+    page.watcher!.setSettings({ ...DEFAULTS, strategy: 'entropy' });
+    await vi.waitFor(() => expect(page.requests).toHaveLength(2));
+    expect(page.requests[1]!.strategy).toBe('entropy');
+    await settle();
+    expect(page.panel.host.hidden).toBe(true);
+    page.panel.toggle();
+    page.panel.host.shadowRoot!.querySelector<HTMLButtonElement>('.actions button')!.click();
+    expect(page.boxes()).toEqual(['t', 'a', 'r', 's', 'e']);
+    const entropy = page.panel.host.shadowRoot!.querySelector<HTMLInputElement>(
+      'input[aria-label="Entropy"]',
+    )!;
+    expect(entropy.checked).toBe(true);
+  });
+
+  test('switching "open after each guess" asks nothing new', async () => {
+    const page = open('empty-hard-off');
+    await vi.waitFor(() => expect(page.requests).toHaveLength(1));
+    page.watcher!.setSettings(autoOff);
+    await settle();
+    expect(page.requests).toHaveLength(1);
+  });
+
+  test('after a win, the button shows that the game is over', async () => {
+    const page = open('won');
+    await settle();
+    page.panel.toggle();
+    expect(page.text()).toBe('This game is over.');
+  });
+
+  test('after a win, a new strategy leaves the opened panel open', async () => {
+    const page = open('won');
+    await settle();
+    page.panel.toggle();
+    page.watcher!.setSettings({ ...DEFAULTS, strategy: 'entropy' });
+    await settle();
+    expect(page.panel.host.hidden).toBe(false);
+    expect(page.text()).toBe('This game is over.');
+  });
+});
+
 describe('a board that is drawn after the page opens', () => {
   test('waits for it instead of calling it unreadable', async () => {
     document.body.innerHTML = '<main>loading</main>';
     const requests: HintRequest[] = [];
     const panel = createPanel(document);
-    stop = watchPage({
+    running = watchPage({
       document,
       storage: storageOf(saved('empty-hard-off').storage),
       panel,
-      strategy: 'entropy',
+      settings: { ...DEFAULTS, strategy: 'entropy' },
       ask: (request) => (requests.push(request), Promise.resolve(answer(nudge, request))),
     });
     await new Promise((settle) => setTimeout(settle, 20));
@@ -236,11 +311,11 @@ describe('a board that is drawn after the page opens', () => {
   test('but says so if it never comes', async () => {
     document.body.innerHTML = '<main>not Wordle after all</main>';
     const panel = createPanel(document);
-    stop = watchPage({
+    running = watchPage({
       document,
       storage: storageOf({}),
       panel,
-      strategy: 'minimax',
+      settings: DEFAULTS,
       ask: () => Promise.resolve({ kind: 'no-word' }),
       waitForBoardMs: 10,
     });

@@ -1,9 +1,10 @@
-// The background script (plan E5): answers the page's hint requests with the
-// real solver, loaded from the extension's own files.
+// The background script (plan E5, E8): answers the page's hint requests with
+// the real solver, loaded from the extension's own files, and runs the toolbar
+// button.
 import { pathToFileURL } from 'node:url';
 import { describe, expect, test, vi } from 'vitest';
 
-type Listener = (message: unknown) => Promise<unknown> | undefined;
+type Listener = (message: unknown, sender?: { tab?: { id?: number } }) => unknown;
 
 const solverDir = process.env.NUDGE_WASM_DIR ?? '../build-wasm/solver/wasm';
 let listener: Listener | undefined;
@@ -13,13 +14,47 @@ const getURL = (path: string) => {
   loaded.push(path);
   return pathToFileURL(`${solverDir}/${path}`).href;
 };
+// What the toolbar button was told: popups set per tab, and messages to tabs.
+const popups: object[] = [];
+const toTabs: [number, unknown][] = [];
+let clicked: ((tab: { id?: number }) => void) | undefined;
+const toolbar = {
+  action: {
+    setPopup: async (details: object) => void popups.push(details),
+    onClicked: { addListener: (added: typeof clicked) => (clicked = added) },
+  },
+  tabs: {
+    sendMessage: async (tabId: number, message: unknown) => void toTabs.push([tabId, message]),
+  },
+};
 vi.stubGlobal('browser', {
+  ...toolbar,
   runtime: {
     getURL,
     onMessage: { addListener: (added: Listener) => (listener = added) },
   },
 });
 await import('../src/background/main');
+
+describe('the toolbar button', () => {
+  test('on a Wordle tab, has no popup, so a click reaches nudge', async () => {
+    await listener!({ type: 'wordle-page' }, { tab: { id: 7 } });
+    expect(popups).toEqual([{ tabId: 7, popup: '' }]);
+  });
+
+  test("a click there shows or hides that tab's panel", () => {
+    clicked!({ id: 7 });
+    expect(toTabs).toEqual([[7, { type: 'toggle' }]]);
+  });
+
+  test('a hello from no tab changes nothing', async () => {
+    popups.length = 0;
+    await listener!({ type: 'wordle-page' }, {});
+    clicked!({});
+    expect(popups).toEqual([]);
+    expect(toTabs).toHaveLength(1);
+  });
+});
 
 describe('the background script', () => {
   test('answers a hint request with the solver', async () => {
@@ -49,6 +84,7 @@ describe('when the solver fails to load', () => {
     let missing = true;
     let fresh: Listener | undefined;
     vi.stubGlobal('browser', {
+      ...toolbar,
       runtime: {
         getURL: (path: string) =>
           pathToFileURL(`${solverDir}/${missing ? 'missing-' : ''}${path}`).href,

@@ -13,7 +13,8 @@
   "icons": { "48": "icons/nudge.svg", "96": "icons/nudge.svg" },
   "action": {
     "default_title": "nudge",
-    "default_icon": "icons/nudge.svg"
+    "default_icon": "icons/nudge.svg",
+    "default_popup": "popup.html"
   },
   "background": {
     "scripts": ["background.js"],

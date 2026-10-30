@@ -41,6 +41,14 @@ describe('manifest', () => {
     expect(policy).not.toMatch(/'unsafe-eval'|'unsafe-inline'|https?:/);
   });
 
+  // Wordle tabs turn it off for themselves, so a click there toggles the panel.
+  test('the toolbar button opens the "Nudge" popup, which the build makes', () => {
+    expect(manifest.action.default_popup).toBe('popup.html');
+    expect(readFileSync(new URL('../build.mjs', import.meta.url), 'utf8')).toContain(
+      "'src/popup/popup.html', 'dist/popup.html'",
+    );
+  });
+
   test("has the package's version, so a release tag can be checked against one number", () => {
     expect(manifest.version).toBe(packageJson.version);
   });

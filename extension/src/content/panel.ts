@@ -2,6 +2,7 @@
 // panel shows"). It lives in a shadow root, so NYT's styles can't change it and
 // its styles can't change NYT's page. It only draws: the page script decides
 // what to show. Text is always set as text, never as markup.
+import type { Settings } from '../settings';
 import { revealAll, revealLetter, type Shroud } from '../shroud';
 
 export const REPORT_URL = 'https://github.com/notpandiafox/nudge/issues';
@@ -12,12 +13,22 @@ export type PanelView =
   // The board or hard mode can't be read.
   | { kind: 'problem'; reason: string }
   // Something else went wrong: the solver, or reaching the background script.
-  | { kind: 'error'; message: string };
+  | { kind: 'error'; message: string }
+  // The game is won or lost (shown only when the player opens the panel).
+  | { kind: 'over' };
 
 export interface Panel {
   host: HTMLElement;
-  show(view: PanelView): void;
+  draw(view: PanelView): void; // changes what it shows, open or not
+  show(view: PanelView): void; // draws, and opens
   hide(): void;
+  toggle(): void; // the toolbar button
+  setSettings(settings: Settings): void;
+}
+
+export interface PanelOptions {
+  random?: () => number; // picks the letter "Reveal a letter" uncovers
+  onSettings?: (change: Partial<Settings>) => void; // a switch was flipped
 }
 
 const STYLE = `
@@ -45,6 +56,11 @@ const STYLE = `
   }
   .actions button:disabled { opacity: 0.5; cursor: default; }
   .reason { font-size: 12px; color: #6b6f73; }
+  .switches {
+    display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 10px; padding-top: 8px;
+    border-top: 1px solid #d3d6da; font-size: 12px;
+  }
+  .switches label { display: flex; align-items: center; gap: 4px; cursor: pointer; }
 `;
 
 function element<K extends keyof HTMLElementTagNameMap>(
@@ -59,7 +75,20 @@ function element<K extends keyof HTMLElementTagNameMap>(
   return made;
 }
 
-export function createPanel(document: Document, random: () => number = Math.random): Panel {
+// A checkbox or radio button inside its label, named by that label.
+function choice(document: Document, type: string, name: string, onChange: () => void) {
+  const input = element(document, 'input');
+  input.type = type;
+  input.name = type === 'radio' ? 'strategy' : name;
+  input.setAttribute('aria-label', name);
+  input.addEventListener('change', onChange);
+  const label = element(document, 'label');
+  label.append(input, name);
+  return { input, label };
+}
+
+export function createPanel(document: Document, options: PanelOptions = {}): Panel {
+  const { random = Math.random, onSettings } = options;
   const host = document.createElement('nudge-panel');
   host.hidden = true;
   const root = host.attachShadow({ mode: 'open' });
@@ -72,8 +101,22 @@ export function createPanel(document: Document, random: () => number = Math.rand
   close.addEventListener('click', () => (host.hidden = true));
   header.append(close);
   const body = element(document, 'div', '', 'body');
-  panel.append(header, body);
+  // The two switches (spec "Switches"); flipping one passes on just that change.
+  const auto = choice(document, 'checkbox', 'Open after each guess', () =>
+    onSettings?.({ autoPanel: auto.input.checked }),
+  );
+  auto.input.setAttribute('role', 'switch');
+  const minimax = choice(document, 'radio', 'Minimax', () => onSettings?.({ strategy: 'minimax' }));
+  const entropy = choice(document, 'radio', 'Entropy', () => onSettings?.({ strategy: 'entropy' }));
+  const switches = element(document, 'div', '', 'switches');
+  switches.append(auto.label, minimax.label, entropy.label);
+  panel.append(header, body, switches);
   root.append(style, panel);
+
+  function open(): void {
+    if (!host.isConnected) document.body.append(host);
+    host.hidden = false;
+  }
 
   // Draws the shroud and its two buttons; the buttons draw it again revealed.
   function drawHint(current: Shroud): void {
@@ -113,19 +156,34 @@ export function createPanel(document: Document, random: () => number = Math.rand
     );
   }
 
+  function draw(view: PanelView): void {
+    if (view.kind === 'hint') drawHint(view.shroud);
+    else if (view.kind === 'no-word') {
+      body.replaceChildren(element(document, 'p', "we don't know what the word is :C"));
+    } else if (view.kind === 'over')
+      body.replaceChildren(element(document, 'p', 'This game is over.'));
+    else if (view.kind === 'problem') drawProblem("nudge can't read the board.", view.reason);
+    else drawProblem('nudge ran into a problem.', view.message);
+  }
+
   return {
     host,
+    draw,
     show(view) {
-      if (!host.isConnected) document.body.append(host);
-      if (view.kind === 'hint') drawHint(view.shroud);
-      else if (view.kind === 'no-word') {
-        body.replaceChildren(element(document, 'p', "we don't know what the word is :C"));
-      } else if (view.kind === 'problem') drawProblem("nudge can't read the board.", view.reason);
-      else drawProblem('nudge ran into a problem.', view.message);
-      host.hidden = false;
+      draw(view);
+      open();
     },
     hide() {
       host.hidden = true;
+    },
+    toggle() {
+      if (host.hidden) open();
+      else host.hidden = true;
+    },
+    setSettings(settings) {
+      auto.input.checked = settings.autoPanel;
+      minimax.input.checked = settings.strategy === 'minimax';
+      entropy.input.checked = settings.strategy === 'entropy';
     },
   };
 }

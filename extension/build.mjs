@@ -34,6 +34,13 @@ await build({
   outfile: 'dist/content.js',
   format: 'iife',
 });
+await build({
+  ...shared,
+  entryPoints: ['src/popup/popup.ts'],
+  outfile: 'dist/popup.js',
+  format: 'iife',
+});
+await copyFile('src/popup/popup.html', 'dist/popup.html');
 
 await copyFile('manifest.json', 'dist/manifest.json');
 await copyFile('../assets/nudge_icon.svg', 'dist/icons/nudge.svg');

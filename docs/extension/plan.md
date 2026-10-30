@@ -372,6 +372,49 @@ with the real page, NYT's saved data and `browser.runtime.sendMessage`.
 - **Done when:** tests with a fake `browser.storage` show both switches
   survive a restart and a new strategy gives a new hint at once.
 
+**Done in E8.** The toolbar button, the two switches, and the "Nudge" popup.
+
+- **The button, per tab:** the manifest gives every tab the "Nudge" popup
+  (`src/popup/`: the name and the "Open after each guess" switch). On
+  Wordle, the page script says so on start (`wordle-page`), and the
+  background script turns that tab's popup off (`action.setPopup` with an
+  empty popup); a click there then reaches the background script, which tells
+  the page to show or hide the panel (`toggle`). Firefox puts the popup back
+  when the tab moves to another page (MDN, `action.setPopup`).
+- **The switches** sit under the hint in the panel: "Open after each guess"
+  (a switch) and Minimax / Entropy. `src/settings.ts` loads them from
+  `browser.storage.local`, checking each value (a wrong one gives that
+  switch's default). Flipping one only saves it; every Wordle tab, this one
+  included, hears the change from storage and follows it, so two tabs never
+  disagree.
+- **"Open after each guess" off:** the hint is still worked out after each
+  guess, so the button shows it at once, but the panel opens only on a click;
+  problems wait for the click too. **A new strategy** asks again for the same
+  board at once and redraws the panel, without opening a closed one.
+- **After a win or a loss** the button shows "This game is over." (new: the
+  spec says the button still shows the panel then, but not what it says).
+- Tests: the switches survive a restart, with wrong saved values; the panel's
+  switches show and pass on each change; the page loop with the switch off,
+  with a new strategy (the empty board's hint becomes `tarse`), and with the
+  other switch flipped (nothing new asked); the button on a Wordle tab and
+  from no tab; the page script's hello, toggle, saving and following; the
+  popup; the manifest's default popup, built by `build.mjs`.
+- Mutation checks, 20, each caught: among them the switch ignored, a strategy
+  change opening a closed panel or not asking again, every switch asking
+  again, the popup left on Wordle, toggling on any message, no hello, a
+  switch not saved, changes not followed, the popup ignoring or not saving
+  its switch, and saved values not checked. One survived: the panel's toggle
+  checked "on the page yet?", which can't matter (a panel not on the page is
+  always hidden), so that check was deleted.
+- Found in review, each fixed with a test that failed first: flipping the
+  strategy after a win closed a panel the player had just opened (now only
+  the winning guess closes it); and Back to a Wordle page kept in Firefox's
+  back-forward cache got the popup back without the script starting again,
+  so the page script now says hello again on `pageshow` from the cache.
+- Left for E10 in Firefox: a click on Wordle before the page script has said
+  hello (right after the page opens) shows the "Nudge" popup once; and
+  whether NYT's Wordle page is kept in the back-forward cache at all.
+
 ### E9. Dark mode, like Wordle
 - **First, look at the live page** with the recorder: turn on Wordle's dark
   theme, and separately put Firefox in dark mode with Wordle's own switch

@@ -1,10 +1,11 @@
-// The page script's loop (plan E7; spec "When the panel appears"): it reads
-// the board when the page opens and each time the page changes, and when a row
-// has become finished it asks the background script for a hint and opens the
-// panel with it. Typing, or anything else that leaves the finished rows as
-// they were, changes nothing, so a closed panel stays closed until the next
-// guess.
-import type { HintRequest, HintResponse, Strategy } from '../messages';
+// The page script's loop (plan E7, E8; spec "When the panel appears"): it
+// reads the board when the page opens and each time the page changes, and when
+// a row has become finished it asks the background script for a hint and draws
+// it in the panel, opening the panel when "open after each guess" is on.
+// Typing, or anything else that leaves the finished rows as they were, changes
+// nothing, so a closed panel stays closed until the next guess.
+import type { HintRequest, HintResponse } from '../messages';
+import type { Settings } from '../settings';
 import { shroud } from '../shroud';
 import type { Panel, PanelView } from './panel';
 import { NO_ROWS, readBoard, type Row } from './readBoard';
@@ -14,32 +15,43 @@ export interface PageDeps {
   document: Document;
   storage: Pick<Storage, 'length' | 'key' | 'getItem'>;
   ask: (request: HintRequest) => Promise<HintResponse>;
-  panel: Pick<Panel, 'show' | 'hide'>;
-  strategy: Strategy;
+  panel: Pick<Panel, 'draw' | 'show' | 'hide' | 'setSettings'>;
+  settings: Settings; // as saved when the page opened
   // How long to wait for NYT to draw the board before calling it unreadable.
   waitForBoardMs?: number;
 }
 
-function view(response: HintResponse, rows: Row[]): PanelView | undefined {
+export interface Page {
+  stop(): void;
+  // The switches changed (in this panel, or in another tab's).
+  setSettings(settings: Settings): void;
+}
+
+function view(response: HintResponse, rows: Row[]): PanelView {
   if (response.kind === 'hint') return { kind: 'hint', shroud: shroud(response.word, rows) };
   if (response.kind === 'no-word') return { kind: 'no-word' };
   if (response.kind === 'error') return { kind: 'error', message: response.message };
-  return undefined; // solved
+  return { kind: 'over' }; // solved
 }
 
-// Starts watching; returns the function that stops it.
-export function watchPage(deps: PageDeps): () => void {
-  const { document, storage, ask, panel, strategy, waitForBoardMs = 5000 } = deps;
+export function watchPage(deps: PageDeps): Page {
+  const { document, storage, ask, panel, waitForBoardMs = 5000 } = deps;
+  let settings = deps.settings;
   let seen = ''; // the board the panel was last drawn for
   let latest = 0; // numbers each board, so an answer for an older one is dropped
   let waited = false;
 
-  function draw(next: PanelView | undefined): void {
-    if (next) panel.show(next);
-    else panel.hide();
+  // The guess that ends the game closes the panel; any other guess opens it,
+  // if the player wants that. A switch flipped changes only what it shows.
+  function draw(next: PanelView, afterGuess: boolean): void {
+    if (next.kind === 'over') {
+      panel.draw(next);
+      if (afterGuess) panel.hide();
+    } else if (afterGuess && settings.autoPanel) panel.show(next);
+    else panel.draw(next);
   }
 
-  function check(): void {
+  function check(afterGuess: boolean): void {
     const board = readBoard(document);
     if (!board.readable && board.reason === NO_ROWS && !waited) return; // not drawn yet
     const key = board.readable ? JSON.stringify(board.rows) : board.reason;
@@ -47,22 +59,24 @@ export function watchPage(deps: PageDeps): () => void {
     seen = key;
     const ticket = ++latest;
 
-    if (!board.readable) return draw({ kind: 'problem', reason: board.reason });
+    if (!board.readable) return draw({ kind: 'problem', reason: board.reason }, afterGuess);
     const { rows } = board;
     const last = rows.at(-1);
-    if (last?.pattern === 'GGGGG' || rows.length === 6) return draw(undefined); // game over
+    if (last?.pattern === 'GGGGG' || rows.length === 6) return draw({ kind: 'over' }, afterGuess);
     const hardMode = readHardMode(storage, rows.length);
-    if (!hardMode.readable) return draw({ kind: 'problem', reason: hardMode.reason });
+    if (!hardMode.readable) return draw({ kind: 'problem', reason: hardMode.reason }, afterGuess);
 
+    const { strategy } = settings;
     ask({ type: 'hint', rows, hardMode: hardMode.hardMode, strategy })
       .then(
         (response) => view(response, rows),
         (error: unknown): PanelView => ({ kind: 'error', message: String(error) }),
       )
-      .then((next) => ticket === latest && draw(next));
+      .then((next) => ticket === latest && draw(next, afterGuess));
   }
 
-  const observer = new MutationObserver(check);
+  panel.setSettings(settings);
+  const observer = new MutationObserver(() => check(true));
   observer.observe(document.body, {
     subtree: true,
     childList: true,
@@ -70,11 +84,23 @@ export function watchPage(deps: PageDeps): () => void {
   });
   const timer = setTimeout(() => {
     waited = true;
-    check();
+    check(true);
   }, waitForBoardMs);
-  check();
-  return () => {
-    observer.disconnect();
-    clearTimeout(timer);
+  check(true);
+
+  return {
+    stop() {
+      observer.disconnect();
+      clearTimeout(timer);
+    },
+    setSettings(next) {
+      const newStrategy = next.strategy !== settings.strategy;
+      settings = next;
+      panel.setSettings(next);
+      if (newStrategy) {
+        seen = ''; // the same board, asked again: a new hint at once
+        check(false);
+      }
+    },
   };
 }

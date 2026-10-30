@@ -20,3 +20,14 @@ export type HintResponse =
   | { kind: 'no-word' }
   // Something the reader should never send; a bug, not a game state.
   | { kind: 'error'; message: string };
+
+// The page script, on start: "this tab is Wordle", so the toolbar button
+// toggles the panel there instead of opening the "Nudge" popup (plan E8).
+export interface WordlePage {
+  type: 'wordle-page';
+}
+
+// The background script to that tab's page script: the button was clicked.
+export interface Toggle {
+  type: 'toggle';
+}

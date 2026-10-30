@@ -40,7 +40,7 @@ describe('the hint', () => {
   });
 
   test('"Reveal a letter" uncovers one more box per press', () => {
-    const panel = createPanel(document, () => 0); // always the first covered box
+    const panel = createPanel(document, { random: () => 0 }); // always the first covered box
     panel.show({ kind: 'hint', shroud: shroud('bions', rows) });
     view(panel).button('Reveal a letter').click();
     expect(view(panel).boxes).toEqual(['b', '', '', 'n', '']);
@@ -107,6 +107,49 @@ describe('the messages', () => {
   });
 });
 
+describe('the switches', () => {
+  const settingsOf = (panel: ReturnType<typeof createPanel>) => {
+    const root = panel.host.shadowRoot!;
+    const input = (name: string) =>
+      root.querySelector<HTMLInputElement>(`input[aria-label="${name}"]`)!;
+    return {
+      auto: input('Open after each guess'),
+      minimax: input('Minimax'),
+      entropy: input('Entropy'),
+    };
+  };
+
+  test('show the saved settings, next to each other under the hint', () => {
+    const panel = createPanel(document);
+    panel.setSettings({ autoPanel: false, strategy: 'entropy' });
+    panel.show({ kind: 'hint', shroud: shroud('bions', rows) });
+    const { auto, minimax, entropy } = settingsOf(panel);
+    expect([auto.checked, minimax.checked, entropy.checked]).toEqual([false, false, true]);
+    expect(auto.getAttribute('role')).toBe('switch');
+    expect(auto.closest('.switches')).toBe(minimax.closest('.switches'));
+    panel.setSettings({ autoPanel: true, strategy: 'minimax' });
+    expect([auto.checked, minimax.checked, entropy.checked]).toEqual([true, true, false]);
+  });
+
+  test('a change is passed on, one switch at a time', () => {
+    const changes: object[] = [];
+    const panel = createPanel(document, { onSettings: (change) => changes.push(change) });
+    panel.setSettings({ autoPanel: true, strategy: 'minimax' });
+    panel.show({ kind: 'no-word' });
+    settingsOf(panel).auto.click();
+    settingsOf(panel).entropy.click();
+    expect(changes).toEqual([{ autoPanel: false }, { strategy: 'entropy' }]);
+  });
+
+  test('stay when the hint is redrawn', () => {
+    const panel = createPanel(document);
+    panel.setSettings({ autoPanel: false, strategy: 'entropy' });
+    panel.show({ kind: 'hint', shroud: shroud('bions', rows) });
+    panel.show({ kind: 'no-word' });
+    expect(settingsOf(panel).entropy.checked).toBe(true);
+  });
+});
+
 describe('the panel on the page', () => {
   test('lives in one host element with its own shadow root, leaving the page alone', () => {
     const panel = createPanel(document);
@@ -139,6 +182,28 @@ describe('the panel on the page', () => {
     panel.show({ kind: 'no-word' });
     const close = view(panel).button('Close');
     expect(close.textContent).toBe('×');
+  });
+
+  test('draw() changes what it shows, without opening it', () => {
+    const panel = createPanel(document);
+    panel.draw({ kind: 'no-word' });
+    expect(panel.host.hidden).toBe(true);
+    expect(view(panel).text).toBe("we don't know what the word is :C");
+  });
+
+  test('toggle() opens it, and closes it again', () => {
+    const panel = createPanel(document);
+    panel.toggle();
+    expect(panel.host.isConnected).toBe(true);
+    expect(panel.host.hidden).toBe(false);
+    panel.toggle();
+    expect(panel.host.hidden).toBe(true);
+  });
+
+  test('after a win or a loss, says the game is over', () => {
+    const panel = createPanel(document);
+    panel.show({ kind: 'over' });
+    expect(view(panel).text).toBe('This game is over.');
   });
 
   test('hide() closes it', () => {
