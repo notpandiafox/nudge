@@ -211,6 +211,32 @@ in their note.
 - `readBoard`: rows, or unreadable (spec, "Reading the board").
 - **Done when:** every copy reads exactly; the edited copy is unreadable.
 
+**Done in E3.** `readBoard` (`src/content/readBoard.ts`) reads every saved
+copy exactly: the empty board, mid-game (`adieu`, `strow`, `smart`), won and
+lost, including `motts` (one T green, the other gray). It reports why it can't
+read a board, which the panel can show with the report link (E7).
+
+- Tests run on the saved copies, with NYT's menu buttons (which also carry
+  `data-state`) placed in front of the rows, the case that misread the spike.
+- **Unreadable:** a tile whose letter or colour disagrees with its spoken
+  label (the edited copy, and a colour edit), a row without five tiles, no
+  rows at all, and **rows with no tiles at all**. That last one goes beyond
+  the spec's "finished row": if NYT renamed the colour attribute, checking
+  only finished rows would read a mid-game board as empty and hint the
+  opener. The spec now says any row.
+- **A colour value it doesn't know** is unreadable too (found in the E3
+  review): only `empty` and `tbd` mean "not finished yet". Before, any
+  unknown value skipped the row, so if NYT renamed `correct`, every row with
+  a green tile vanished and the board read as almost empty.
+- Rows being typed, or turning over one tile at a time, are ignored until
+  every tile has a colour.
+- Mutation checks, each caught: the letter or the colour not checked against
+  the label, the five-tile check removed, a half-turned row counted, and the
+  spike's own bug (tiles taken across the whole page), which fails 8 tests.
+- Under Vitest's jsdom environment, `import.meta.url` doesn't point at the
+  test file, so the saved copies are loaded by a path relative to
+  `extension/`, where the tests run.
+
 ### E4. Hard-mode reader
 - `readHardMode`: the game entry matching the rows on screen, else the
   settings entry, else unreadable.

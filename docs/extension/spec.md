@@ -47,8 +47,12 @@ server and no network requests.
 - Every tile is checked twice: its letter and color must agree with its
   spoken label (for example `"3rd letter, I, correct"`).
 - The board is **unreadable** when a tile's two readings disagree, when a
-  finished row doesn't have exactly five tiles, or when no `Row` elements are
-  found on the Wordle page.
+  row (finished or not) doesn't have exactly five tiles, when a tile's colour
+  value is one nudge doesn't know (only `empty` and `tbd` mean "not finished
+  yet"), or when no `Row` elements are found on the Wordle page. (Any row, not only finished ones,
+  since E3: if NYT renamed the tiles' colour attribute, every row would have
+  no tiles, and only finished rows being checked would read as an empty
+  board in the middle of a game.)
 - nudge never reads the answer, and never takes the guesses from NYT's saved
   data: only from what is on screen (intent must-have).
 
