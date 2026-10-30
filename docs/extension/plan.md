@@ -18,10 +18,11 @@
 | E-D6 | Tests with **Vitest** + **jsdom** (a DOM in Node), on saved copies of NYT's page; the real `nudge.mjs` in Node for the solver tests | Vitest runs TypeScript directly; jsdom reads the saved copies like a browser would |
 | E-D7 | **100% line and function coverage** of `extension/src`, like the solver | Same bar for the whole project; most code is pure functions that are easy to cover |
 | E-D8 | The panel lives in a **shadow root** (its own little document inside NYT's page) | NYT's styles can't change the panel, and the panel's can't change NYT's page |
-| E-D9 | Settings in `browser.storage.local`: `{ autoPanel: true, strategy: "minimax" }` | Remembered after Firefox closes, on this computer only (spec) |
+| E-D9 | Settings in `browser.storage.local`: `{ autoPanel: true, strategy: "minimax" }`, plus `theme` (`"light"` or `"dark"`), the last Wordle theme seen (E9) | Remembered after Firefox closes, on this computer only (spec) |
 | E-D10 | Exact versions for every npm package (`package-lock.json`, `npm ci` in CI) | Same reason as the solver's pinned tools: CI and your laptop run the same code |
 | E-D11 | **CI/CD:** CI on every push (below); on a version tag (`v1.0.0`), CI also builds, gets Mozilla to sign the extension, and attaches the signed `.xpi` to a GitHub Release | Firefox installs only signed extensions permanently; a tag is the one manual step |
 | E-D12 | **Tooling:** web-ext (run Firefox with the extension, `web-ext lint`, packaging and signing), ESLint with typescript-eslint, Prettier, a pre-commit hook (simple-git-hooks running `extension/scripts/pre-commit.mjs`: Prettier and ESLint on the changed extension files, clang-format on the changed C++ files), `@types/firefox-webext-browser`, and Dependabot for version updates. Not Playwright (it can't easily load extensions in Firefox) and not happy-dom (jsdom does that job) | The TypeScript side gets the same checks as the C++ side (clang-format, clang-tidy); the hook catches formatting before CI does, like the stray space in `ranking.hpp`. A small script instead of lint-staged, because lint-staged sees only the files under `extension/`, and that space was in `solver/` |
+| E-D13 | **Dark mode is read from the page's colours**, not from a class name or NYT's saved settings: the background colour of the nearest element behind the board that has one; dark when its brightness is below half. No board yet: Firefox's own setting (`prefers-color-scheme`) | It is what the player sees, whichever way Wordle got dark (its own switch, or following Firefox); it survives NYT renaming classes, like the board reader (E3); and it reads nothing new from saved data |
 
 ### E-D1: panel on the page, or the toolbar popup? (Decided: the page.)
 
@@ -76,7 +77,8 @@ extension/
 │   ├── content/page.ts          the loop: observe, read, ask, draw
 │   ├── content/readBoard.ts     pure: Document → rows, or unreadable
 │   ├── content/readHardMode.ts  pure: saved data + rows on screen → hard mode, or unreadable
-│   ├── content/panel.ts         draws a panel state into the shadow root
+│   ├── content/panel.ts         draws a panel state into the shadow root, light or dark
+│   ├── content/theme.ts         pure: the page → light or dark (E-D13)
 │   ├── shroud.ts                pure: hint + known greens → boxes; reveal one, reveal all
 │   ├── background/solverHost.ts board + mode + strategy → hint or "no word"
 │   ├── popup/                   the "Nudge" popup (title + switch)
@@ -104,7 +106,7 @@ answer, with no browser at all. Only `main.ts` touches the live page.
 - **No network:** a test fails if any extension code calls `fetch`,
   `XMLHttpRequest` or `WebSocket` for anything but the extension's own files;
   the manifest asks for no other site.
-- **In Firefox:** a short manual checklist on the live page (E9), because no
+- **In Firefox:** a short manual checklist on the live page (E10), because no
   test runner drives a Firefox extension on NYT's real site.
 
 ## 4. CI
@@ -123,7 +125,7 @@ signs it; the job attaches the signed `.xpi` to a GitHub Release for that tag.
 It needs an AMO API key and secret, which the developer creates on AMO and
 stores as GitHub repository secrets (`AMO_JWT_ISSUER`, `AMO_JWT_SECRET`); CI
 reads them, nothing else does. Listed (public on AMO, reviewed by Mozilla) or
-unlisted (signed, shared from GitHub Releases) is decided before E10.
+unlisted (signed, shared from GitHub Releases) is decided before E11.
 
 ## 5. Tasks, in order
 
@@ -169,7 +171,7 @@ puzzle piece).
 - On Windows PowerShell, call npm as `npm.cmd` (`npm.cmd start`) unless
   scripts are allowed (`Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`).
 - **Open:** the icon (`assets/nudge_icon.svg`) is 169 × 128; `web-ext lint`
-  warns that icons must be square. Fix before E10.
+  warns that icons must be square. Fix before E11.
 
 ### E2. Saved copies of NYT's page
 - A small recorder (grown from the spike) that saves the board's HTML and
@@ -360,7 +362,7 @@ with the real page, NYT's saved data and `browser.runtime.sendMessage`.
   loss, never hiding, losing the error text, not waiting for the board,
   never giving up waiting, ignoring or hiding unreadable hard mode, and not
   watching for new rows.
-- Left for E9 in Firefox: NYT may save the new row a moment after the tiles
+- Left for E10 in Firefox: NYT may save the new row a moment after the tiles
   turn over; if the saved settings disagree in that moment, the panel would
   say it can't read hard mode.
 
@@ -370,13 +372,35 @@ with the real page, NYT's saved data and `browser.runtime.sendMessage`.
 - **Done when:** tests with a fake `browser.storage` show both switches
   survive a restart and a new strategy gives a new hint at once.
 
-### E9. In Firefox, end to end
+### E9. Dark mode, like Wordle
+- **First, look at the live page** with the recorder: turn on Wordle's dark
+  theme, and separately put Firefox in dark mode with Wordle's own switch
+  untouched. Note the colour behind the board in each, and what NYT changes
+  when the theme switches (a class or style on `<html>` or `<body>`?), so the
+  page script knows what to watch. The recorder also saves that colour (a
+  colour value only, nothing personal; the fixture guard allows it), and a
+  dark saved copy joins the others.
+- `theme.ts`: `readTheme(document)` → `"light"` or `"dark"` (E-D13).
+- The panel's colours become CSS variables with a light and a dark set
+  (Wordle's own, spec "How the panel looks"); `panel.setTheme(theme)` picks
+  one, without redrawing the hint.
+- The page script reads the theme on start and whenever the watched element
+  changes, sets it on the panel, and saves it to `browser.storage.local` when
+  it changes. The "Nudge" popup (E8) reads the saved theme, or follows
+  Firefox's setting when none is saved.
+- **Done when:** jsdom tests show the light copy gives a light panel and the
+  dark copy a dark one (the recorded colour put behind the board), a theme
+  switch on the page changes the panel at once and asks for no new hint, the
+  theme is saved once per change, and the popup shows the saved theme or
+  Firefox's. In E10, both ways of going dark are checked on the live page.
+
+### E10. In Firefox, end to end
 - The manual checklist on the live page; the 1-second check (from a guess
   to the hint being ready); no network requests in Firefox's network panel;
   the packaged extension. Delete `spike/firefox/`.
 - **Done when:** every checklist item passes, with the numbers recorded here.
 
-### E10. Release (CD)
+### E11. Release (CD)
 - The tag-triggered job: build, `web-ext sign`, GitHub Release with the
   signed `.xpi`. Version number from `manifest.json`, checked against the tag.
 - **Done when:** a test tag (`v0.1.0`) produces a signed `.xpi` that installs
@@ -390,13 +414,14 @@ with the real page, NYT's saved data and `browser.runtime.sendMessage`.
 | NYT renames its saved-data entries | Hard mode unreadable | Same "can't read" message (E4) |
 | Firefox suspends the background script | Next hint reloads the solver | ~10 ms; nothing to restore (E-D3) |
 | NYT's page styles leak into the panel | Panel looks broken | Shadow root (E-D8) |
+| NYT changes how its dark theme looks | Panel picks the wrong theme | Only the look is wrong, never the hint; no report asked. A new saved copy shows what changed (E9) |
 
 ## 7. Decided, and still to decide
 
 Decided (draft 2): the page panel (E-D1); TypeScript, esbuild, Vitest and
-jsdom; minimum Firefox 128; 100% coverage; CI/CD (E-D11, E10); the tooling
+jsdom; minimum Firefox 128; 100% coverage; CI/CD (E-D11, E11); the tooling
 of E-D12.
 
-Still to decide, before E10: listed on AMO (addons.mozilla.org, Mozilla's
+Still to decide, before E11: listed on AMO (addons.mozilla.org, Mozilla's
 add-ons site: public, reviewed) or unlisted (signed by AMO, shared from
 GitHub Releases).

@@ -104,6 +104,9 @@ On the Wordle page, with a readable board:
   read the board, and asks the player to report it, with a link to the
   project's GitHub issues page (`https://github.com/notpandiafox/nudge/issues`).
   It shows no hint, so it never hints from a misread board.
+- **When something else goes wrong** (the solver fails, or the page can't
+  reach it): the panel says "nudge ran into a problem.", with the same report
+  link and the error.
 
 Anywhere else (no NYT game, or a game without a solver), clicking the
 toolbar button shows only "Nudge" and the automatic-panel switch.
@@ -126,6 +129,25 @@ toolbar button shows only "Nudge" and the automatic-panel switch.
   this against Firefox's current rules). Clicking the toolbar button shows or
   hides the same panel.
 - The panel never covers the board or the keyboard, and can be closed.
+
+### How the panel looks: light or dark, like Wordle
+
+- The panel follows Wordle's theme: light when Wordle is light, dark when
+  Wordle is dark, in Wordle's own colours (dark: page `#121213`, text white,
+  covered boxes `#3a3a3c`, green `#538d4e`; light: white, `#787c7e`,
+  `#6aaa64`).
+- nudge tells which by **looking at the page**: the colour behind the board.
+  That is what the player sees, it is right whether the player turned on
+  Wordle's dark theme or Wordle follows Firefox's dark mode, and nudge reads
+  nothing new from NYT's saved data.
+- Switching Wordle's theme while the panel is open switches the panel at
+  once, without a new hint.
+- The last theme seen is **remembered** (extension storage, this computer
+  only), so the toolbar's "Nudge" popup, which also opens away from Wordle,
+  matches it. Before nudge has seen Wordle once, the popup follows Firefox's
+  own light or dark setting.
+- Not in this version: Wordle's high-contrast colours (orange and blue); the
+  panel keeps its green.
 
 ## Interfaces
 
@@ -170,6 +192,9 @@ toolbar button shows only "Nudge" and the automatic-panel switch.
 - The automatic panel opens on page load and after each guess when on, and
   only on a toolbar click when off. Both switches survive a Firefox restart.
 - On a non-Wordle NYT page, the button shows only "Nudge" and the switch.
+- With Wordle dark, the panel is dark; with Wordle light, it is light; a
+  switch of Wordle's theme switches the panel at once. The popup shows the
+  last theme seen, or Firefox's setting before Wordle has been seen.
 - No network request is made by the extension (checked in the tests).
 
 ## Tests
@@ -192,6 +217,7 @@ toolbar button shows only "Nudge" and the automatic-panel switch.
 | Where is the drop-down? | A panel drawn on the Wordle page, top right; the toolbar button shows or hides it |
 | Is the automatic panel on by default? | Yes |
 | After a win or a loss? | The panel stays quiet; the toolbar button still shows it |
+| Dark mode? | Follows Wordle's theme, read from the page's colours; the last one seen is remembered for the popup |
 
 ## Out of scope
 
