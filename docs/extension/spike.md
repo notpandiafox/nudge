@@ -1,6 +1,7 @@
 # Spike: the solver in Firefox, and the NYT Wordle page
 
-A throwaway Firefox extension (`spike/firefox/`), run by the developer on the
+A throwaway Firefox extension (`spike/firefox/`, deleted in extension task E10;
+it's in the git history before that), run by the developer on the
 real NYT Wordle page in Firefox, to answer three questions before the
 extension's spec. It only read the page; it never typed or clicked.
 

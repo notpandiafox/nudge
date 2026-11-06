@@ -18,6 +18,7 @@
     "format:check": "prettier --check .",
     "webext:lint": "web-ext lint --source-dir dist",
     "package": "web-ext build --source-dir dist --artifacts-dir web-ext-artifacts --overwrite-dest",
+    "source": "git -C .. archive --format=zip --output=extension/web-ext-artifacts/nudge-source.zip HEAD",
     "prepare": "simple-git-hooks"
   },
   "simple-git-hooks": {

@@ -49,6 +49,24 @@ describe('the hint', () => {
     expect(view(panel).label).toBe('Hint: 2 of 5 letters covered');
   });
 
+  // Green means "green on the board", as in Wordle; a revealed letter isn't
+  // known to be in the right place yet.
+  test('only the known greens are green, before and after revealing', () => {
+    const panel = createPanel(document, { random: () => 0 });
+    panel.show({ kind: 'hint', shroud: shroud('bions', rows) });
+    const greens = () =>
+      [...view(panel).root.querySelectorAll('.box')].map((box) => box.classList.contains('green'));
+    expect(greens()).toEqual([false, false, false, true, false]);
+    view(panel).button('Reveal a letter').click();
+    view(panel).button('Reveal the hint').click();
+    expect(greens()).toEqual([false, false, false, true, false]);
+    // jsdom doesn't compute styles, so check the rules: green only for .green.
+    const style = view(panel).root.querySelector('style')!.textContent!;
+    expect(style.match(/[^}]*var\(--green\)/g)!.map((rule) => rule.trim())).toEqual([
+      expect.stringMatching(/^\.box\.green \{/),
+    ]);
+  });
+
   test('"Reveal the hint" uncovers every box, and then nothing is left to reveal', () => {
     const panel = createPanel(document);
     panel.show({ kind: 'hint', shroud: shroud('bions', rows) });

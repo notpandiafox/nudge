@@ -49,10 +49,13 @@ server and no network requests.
 - The board is **unreadable** when a tile's two readings disagree, when a
   row (finished or not) doesn't have exactly five tiles, when a tile's colour
   value is one nudge doesn't know (only `empty` and `tbd` mean "not finished
-  yet"), or when no `Row` elements are found on the Wordle page. (Any row, not only finished ones,
+  yet"). (Any row, not only finished ones,
   since E3: if NYT renamed the tiles' colour attribute, every row would have
   no tiles, and only finished rows being checked would read as an empty
   board in the middle of a game.)
+- No `Row` elements at all is **no board yet**, not unreadable: NYT's welcome
+  screen draws no board until the player presses Play, however long that
+  takes (found in E10). The panel doesn't open by itself then.
 - nudge never reads the answer, and never takes the guesses from NYT's saved
   data: only from what is on screen (intent must-have).
 
@@ -69,6 +72,9 @@ server and no network requests.
   unreadable board. It's also unreadable when the entries it would use
   disagree (two matching games, or the signed-in and signed-out settings),
   rather than nudge guessing which one applies (since E4).
+- NYT saves the new row a moment after its tiles turn, so right after a
+  guess no game entry matches yet. nudge looks again for up to 2 seconds
+  before calling hard mode unreadable (found in E10).
 - There is no hard-mode switch in nudge.
 
 ### When the panel appears
@@ -93,6 +99,10 @@ On the Wordle page, with a readable board:
     green fits; in hard mode they always do.)
   - Before the first guess, the hint is the stored first guess (minimax
     `olate`, entropy `tarse`), with every box covered.
+- Only known greens are green. A box uncovered with the buttons below shows
+  its letter like a typed tile in Wordle (no fill, a grey border): the hint
+  is the solver's guess, not a letter known to be in place (found in E10:
+  every uncovered box used to be green).
 - **"Reveal the hint":** uncovers every box.
 - **"Reveal a letter":** uncovers one covered box, chosen at random. Each
   press uncovers one more, until the whole word shows.
@@ -104,6 +114,9 @@ On the Wordle page, with a readable board:
   read the board, and asks the player to report it, with a link to the
   project's GitHub issues page (`https://github.com/notpandiafox/nudge/issues`).
   It shows no hint, so it never hints from a misread board.
+- **When there's no board yet** (the welcome screen): the panel, opened with
+  the button, says "No board on the page yet." and "If the board is
+  showing, please report it on GitHub.", with the same link.
 - **When something else goes wrong** (the solver fails, or the page can't
   reach it): the panel says "nudge ran into a problem.", with the same report
   link and the error.
@@ -128,7 +141,11 @@ toolbar button shows only "Nudge" and the automatic-panel switch.
   popup is expected to open only on a click in Firefox (the plan confirms
   this against Firefox's current rules). Clicking the toolbar button shows or
   hides the same panel.
-- The panel never covers the board or the keyboard, and can be closed.
+- The panel never opens by itself over the board. In a window too narrow
+  for it beside the board, a guess leaves it closed and the toolbar button
+  shows it; then it covers part of the board until it's closed (found in
+  E10: a narrow window has no room that covers neither the board nor the
+  keyboard). It can always be closed.
 
 ### How the panel looks: light or dark, like Wordle
 

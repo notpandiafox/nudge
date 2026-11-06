@@ -26,8 +26,11 @@ const SPOKEN: Record<string, string> = {
   X: 'absent',
 };
 
+// The board's rows, as NYT labels them.
+export const ROWS = '[aria-label^="Row "]';
+
 export function readBoard(document: Document): BoardReading {
-  const rowElements = [...document.querySelectorAll('[aria-label^="Row "]')];
+  const rowElements = [...document.querySelectorAll(ROWS)];
   if (rowElements.length === 0) return { readable: false, reason: NO_ROWS };
 
   const rows: Row[] = [];

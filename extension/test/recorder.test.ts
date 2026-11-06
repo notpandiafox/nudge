@@ -45,11 +45,11 @@ const settings = (hardMode: boolean) => ({
 describe('recordStorage', () => {
   const recorded = recordStorage(
     nytStorage({
-      'games-state-wordleV2/103659666': gameState(true),
-      'games-settings-wordleV2/103659666': settings(true),
+      'games-state-wordleV2/987654321': gameState(true),
+      'games-settings-wordleV2/987654321': settings(true),
       'games-state-wordleV2/ANON': gameState(false),
       'statsig.stable_id.1838556842': 'abc-def',
-      'wordle-legacy-stats-103659666': { gamesPlayed: 40 },
+      'wordle-legacy-stats-987654321': { gamesPlayed: 40 },
       'geo-location': '{"country":"US"}',
     }),
   );
@@ -77,7 +77,7 @@ describe('recordStorage', () => {
 
   test('never keeps the guesses, the answer, or the real account number', () => {
     const text = JSON.stringify(recorded);
-    for (const secret of ['spike', 'grime', 'brink', 'boardState', 'solution', '103659666']) {
+    for (const secret of ['spike', 'grime', 'brink', 'boardState', 'solution', '987654321']) {
       expect(text).not.toContain(secret);
     }
   });

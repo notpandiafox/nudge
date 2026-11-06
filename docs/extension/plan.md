@@ -170,8 +170,9 @@ puzzle piece).
   years-old web-ext.
 - On Windows PowerShell, call npm as `npm.cmd` (`npm.cmd start`) unless
   scripts are allowed (`Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`).
-- **Open:** the icon (`assets/nudge_icon.svg`) is 169 × 128; `web-ext lint`
-  warns that icons must be square. Fix before E11.
+- The icon (`assets/nudge_icon.svg`) was 169 × 128, and `web-ext lint`
+  warned that icons must be square. Fixed before E11: a 169 × 169 canvas
+  with the drawing centred.
 
 ### E2. Saved copies of NYT's page
 - A small recorder (grown from the spike) that saves the board's HTML and
@@ -475,13 +476,80 @@ picture address in it).
 - The manual checklist on the live page; the 1-second check (from a guess
   to the hint being ready); no network requests in Firefox's network panel;
   the packaged extension. Delete `spike/firefox/`.
+- The checklist, gathered from E7–E9:
+  1. **Speed:** from the last tile of a guess turning to the hint showing,
+     under 1 second (timed in the page's console).
+  2. **No network:** the background script's network panel shows only the
+     extension's own files.
+  3. **The welcome screen:** waiting on it longer than 5 seconds doesn't say
+     "nudge can't read the board".
+  4. **Hard mode:** no "can't read hard mode" right after a guess.
+  5. **A narrow window:** the panel doesn't cover the board or the keyboard.
+  6. **The button:** after Back to Wordle it still shows and hides the
+     panel; a click right after the page opens.
+  7. **Dark:** Wordle's own dark theme, and Firefox's dark mode with
+     Wordle's untouched; switching the theme with the panel open.
+  8. **The package:** `npm run package` gives a `.zip` with only the built
+     files, and the manifest asks for the Wordle page and storage only.
 - **Done when:** every checklist item passes, with the numbers recorded here.
+
+**Done in E10** (2026-11-05, the developer's Firefox, the live page). Four
+items failed the first time; each got a test that failed first, then a fix,
+and all passed on the second try.
+
+1. **Speed:** "0 ms" on both timed guesses. With Firefox's fingerprinting
+   protection on, the page's clock ticks coarsely, so the hint was ready
+   within one tick: far under the 1-second budget.
+2. **No network:** the background script's network panel (filter "All")
+   shows only the extension's own files.
+3. **The welcome screen failed:** NYT draws no board until Play, so after
+   5 seconds nudge said it couldn't read the board. The 5-second wait is
+   gone: no board is "No board on the page yet." (with "If the board is
+   showing, please report it"), which never opens the panel by itself.
+4. **Hard mode failed:** right after a guess the panel briefly said it
+   couldn't read hard mode, because NYT saves the new row a moment later. It
+   now looks again every 50 ms for up to 2 seconds before saying so (a newer
+   board, a win, or stopping ends the wait).
+5. **A narrow window failed:** the panel covered the board. A narrow window
+   has no room that covers neither the board nor the keyboard, so a guess now
+   opens the panel only where it fits beside the board; otherwise the button
+   shows it (spec "Where the panel appears").
+6. **The button:** after Back to Wordle it still shows and hides the panel. A
+   click right after the page opens shows the "Nudge" popup once: accepted.
+7. **Dark:** with Wordle's dark theme switched on or off, the panel follows at
+   once. Wordle doesn't follow Firefox's dark mode; the panel matches Wordle.
+8. **The package:** 9 built files, 125 KB, no source maps or tests; the
+   manifest asks for the Wordle page and storage only.
+
+- Also found on the live page: every uncovered box was green, so a revealed
+  letter looked known. Only known greens are green now; a revealed letter
+  looks like a typed tile in Wordle.
+- Mutation checks, 15, each caught (two only after the tests were tightened:
+  stopping during the hard-mode wait, and the panel's margin).
+- `spike/firefox/` is deleted (`spike.md` says where to find it).
 
 ### E11. Release (CD)
 - The tag-triggered job: build, `web-ext sign`, GitHub Release with the
   signed `.xpi`. Version number from `manifest.json`, checked against the tag.
 - **Done when:** a test tag (`v0.1.0`) produces a signed `.xpi` that installs
   in a normal Firefox and keeps working after a restart.
+
+**Ready for E11** (2026-11-05). Decided: **listed** on AMO. The first version
+is uploaded by hand on AMO's Developer Hub; the tag-triggered job above signs
+the later ones.
+
+- The icon is square (169 × 169), so `web-ext lint` gives no warnings.
+- `BUILDING.md` tells AMO's reviewers how to rebuild the add-on from source
+  (esbuild bundles the TypeScript; Emscripten 6.0.12 compiles the solver).
+  `npm run source` zips the committed source (`git archive` of `HEAD`).
+- Checked: the source zip, unpacked into an empty folder and built as
+  `BUILDING.md` says, gives every file of `dist/` byte for byte.
+  `nudge.wasm` built on Windows and in CI (Linux) is identical, but the
+  Windows `nudge.mjs` has two Windows line endings, so the package uploaded
+  to AMO is CI's (`nudge-extension` artifact), never a local one.
+- Found while checking the source zip: a recorder test held the real NYT
+  account number, committed in E2; it now uses a made-up one. It's still in
+  the git history.
 
 ## 6. Risks
 
@@ -499,6 +567,6 @@ Decided (draft 2): the page panel (E-D1); TypeScript, esbuild, Vitest and
 jsdom; minimum Firefox 128; 100% coverage; CI/CD (E-D11, E11); the tooling
 of E-D12.
 
-Still to decide, before E11: listed on AMO (addons.mozilla.org, Mozilla's
-add-ons site: public, reviewed) or unlisted (signed by AMO, shared from
-GitHub Releases).
+Decided before E11: listed on AMO (addons.mozilla.org, Mozilla's add-ons
+site: public, reviewed), not unlisted (signed by AMO, shared from GitHub
+Releases).

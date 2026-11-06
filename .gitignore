@@ -17,10 +17,6 @@ node_modules/
 # IDE
 .idea/
 
-# The spike's copy of the WebAssembly build (spike/firefox/README.md)
-spike/firefox/nudge.mjs
-spike/firefox/nudge.wasm
-
 # The extension's build output (extension/build.mjs, web-ext)
 extension/dist/
 extension/web-ext-artifacts/

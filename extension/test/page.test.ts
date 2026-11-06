@@ -9,7 +9,7 @@ import { afterEach, describe, expect, test, vi } from 'vitest';
 import { answer, type SolverModule } from '../src/background/solverHost';
 import type { HintRequest, HintResponse } from '../src/messages';
 import { watchPage, type Page } from '../src/content/page';
-import { createPanel } from '../src/content/panel';
+import { createPanel, REPORT_URL } from '../src/content/panel';
 import { DEFAULTS, type Settings } from '../src/settings';
 import { shroud } from '../src/shroud';
 
@@ -41,6 +41,7 @@ function open(
   ask?: (request: HintRequest) => Promise<HintResponse>,
   storage = saved(name).storage,
   settings: Settings = DEFAULTS,
+  hardModeWaitMs = 0,
 ) {
   const fixture = saved(name);
   document.body.innerHTML = `<main>${fixture.boardHtml}</main>`;
@@ -51,6 +52,7 @@ function open(
     storage: storageOf(storage),
     panel,
     settings,
+    hardModeWaitMs,
     ask: (request) => {
       requests.push(request);
       return ask ? ask(request) : Promise.resolve(answer(nudge, request));
@@ -194,8 +196,56 @@ describe('the other answers', () => {
     expect(page.text()).toBe('This game is over.');
   });
 
-  test('unreadable hard mode: says so, asks the solver nothing', async () => {
-    const page = open('mid-game', undefined, {});
+  // NYT saves the new row a moment after its tiles turn; until then the saved
+  // game still has the rows before it.
+  test('hard mode saved a moment after the guess: waits for it, no alarm', async () => {
+    const game = { states: [{ data: { hardMode: true, currentRowIndex: 3 } }] };
+    const page = open(
+      'mid-game',
+      undefined,
+      { 'games-state-wordleV2/10000001': game },
+      DEFAULTS,
+      1000,
+    );
+    await vi.waitFor(() => expect(page.requests).toHaveLength(1));
+    const shown = vi.spyOn(page.panel, 'show');
+    const drawn = vi.spyOn(page.panel, 'draw');
+    guess(troop!);
+    setTimeout(() => (game.states[0]!.data.currentRowIndex = 4), 30);
+    await vi.waitFor(() => expect(page.requests).toHaveLength(2));
+    expect(page.requests[1]!.hardMode).toBe(true);
+    const kinds = [...shown.mock.calls, ...drawn.mock.calls].map(([view]) => view.kind);
+    expect(kinds).not.toContain('problem');
+  });
+
+  test('a win while waiting for that save ends the wait: no alarm over the won game', async () => {
+    const game = { states: [{ data: { hardMode: true, currentRowIndex: 3 } }] };
+    const page = open(
+      'mid-game',
+      undefined,
+      { 'games-state-wordleV2/10000001': game },
+      DEFAULTS,
+      100,
+    );
+    await vi.waitFor(() => expect(page.panel.host.hidden).toBe(false));
+    guess(troop!);
+    await new Promise((settle) => setTimeout(settle, 20)); // waiting for the save
+    guess(motor!);
+    await vi.waitFor(() => expect(page.panel.host.hidden).toBe(true));
+    await new Promise((settle) => setTimeout(settle, 200));
+    expect(page.panel.host.hidden).toBe(true);
+    expect(page.text()).toBe('This game is over.');
+  });
+
+  test('stopped while waiting for the save: shows nothing more', async () => {
+    const page = open('mid-game', undefined, {}, DEFAULTS, 50);
+    page.watcher.stop();
+    await new Promise((settle) => setTimeout(settle, 100));
+    expect(page.panel.host.hidden).toBe(true);
+  });
+
+  test('unreadable hard mode: says so once the wait is over, asks the solver nothing', async () => {
+    const page = open('mid-game', undefined, {}, DEFAULTS, 50);
     await vi.waitFor(() => expect(page.text()).toContain('no saved Wordle game or settings'));
     expect(page.text()).toContain("nudge can't read the board");
     expect(page.requests).toEqual([]);
@@ -289,6 +339,31 @@ describe('the switches', () => {
   });
 });
 
+// The panel sits at the top right; in a window too narrow for it beside the
+// board it would cover the board, so it waits for the button there.
+describe('a narrow window', () => {
+  const jsdomWidth = Object.getOwnPropertyDescriptor(window, 'innerWidth')!;
+  afterEach(() => Object.defineProperty(window, 'innerWidth', jsdomWidth));
+
+  test('a guess leaves the panel closed over the board; the button shows the hint', async () => {
+    const page = open('mid-game');
+    await vi.waitFor(() => expect(page.panel.host.hidden).toBe(false));
+    page.close();
+    // The panel reaches 276px in (260 wide, 16 from the edge): to 524, past the board's 530.
+    Object.defineProperty(window, 'innerWidth', { value: 800, configurable: true });
+    document.querySelector('[aria-label="Row 1"]')!.getBoundingClientRect = () =>
+      ({ right: 530 }) as DOMRect;
+    guess(troop!);
+    await vi.waitFor(() => expect(page.requests).toHaveLength(2));
+    await new Promise((settle) => setTimeout(settle, 20));
+    expect(page.panel.host.hidden).toBe(true);
+    page.panel.toggle();
+    const { word } = answer(nudge, page.requests[1]!) as { word: string };
+    const { shown } = shroud(word, page.requests[1]!.rows);
+    expect(page.boxes()).toEqual(shown.map((isShown, i) => (isShown ? word[i] : '')));
+  });
+});
+
 describe('a board that is drawn after the page opens', () => {
   test('waits for it instead of calling it unreadable', async () => {
     document.body.innerHTML = '<main>loading</main>';
@@ -308,21 +383,31 @@ describe('a board that is drawn after the page opens', () => {
     await vi.waitFor(() => expect(panel.host.hidden).toBe(false));
   });
 
-  test('but says so if it never comes', async () => {
-    document.body.innerHTML = '<main>not Wordle after all</main>';
-    const panel = createPanel(document);
-    running = watchPage({
-      document,
-      storage: storageOf({}),
-      panel,
-      settings: DEFAULTS,
-      ask: () => Promise.resolve({ kind: 'no-word' }),
-      waitForBoardMs: 10,
-    });
-    await vi.waitFor(() =>
-      expect(panel.host.shadowRoot!.querySelector('.body')!.textContent).toContain(
-        'no "Row" elements',
-      ),
-    );
+  // NYT's welcome screen draws no board until Play is pressed, however long
+  // that takes, so a missing board never opens the panel by itself.
+  test('the welcome screen: no alarm, however long; the button says no board yet', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      document.body.innerHTML = '<main>Welcome. Play</main>';
+      const panel = createPanel(document);
+      running = watchPage({
+        document,
+        storage: storageOf({}),
+        panel,
+        settings: DEFAULTS,
+        ask: () => Promise.resolve({ kind: 'no-word' }),
+      });
+      vi.advanceTimersByTime(60_000);
+      expect(panel.host.hidden).toBe(true);
+      panel.toggle();
+      const body = panel.host.shadowRoot!.querySelector('.body')!;
+      expect([...body.querySelectorAll('p')].map((p) => p.textContent)).toEqual([
+        'No board on the page yet.',
+        'If the board is showing, please report it on GitHub.',
+      ]);
+      expect(body.querySelector('a')!.href).toBe(REPORT_URL);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

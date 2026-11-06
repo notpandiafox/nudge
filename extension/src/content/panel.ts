@@ -7,10 +7,16 @@ import { revealAll, revealLetter, type Shroud } from '../shroud';
 import type { Theme } from './theme';
 
 export const REPORT_URL = 'https://github.com/notpandiafox/nudge/issues';
+const WIDTH = 260;
+const MARGIN = 16; // from the window's right edge
+// How far in from the window's right edge the panel reaches.
+export const PANEL_SPACE = WIDTH + MARGIN;
 
 export type PanelView =
   | { kind: 'hint'; shroud: Shroud }
   | { kind: 'no-word' }
+  // No board on the page: NYT's welcome screen, or NYT changed its page.
+  | { kind: 'no-board' }
   // The board or hard mode can't be read.
   | { kind: 'problem'; reason: string }
   // Something else went wrong: the solver, or reaching the background script.
@@ -38,18 +44,18 @@ export interface PanelOptions {
 const STYLE = `
   :host {
     all: initial; color-scheme: light;
-    --page: #ffffff; --text: #1a1a1b; --line: #d3d6da; --covered: #787c7e; --green: #6aaa64;
+    --page: #ffffff; --text: #1a1a1b; --line: #d3d6da; --covered: #787c7e; --typed: #878a8c; --green: #6aaa64;
     --button: #f6f7f8; --quiet: #6b6f73; --link: #0b57d0; --shadow: rgb(0 0 0 / 25%);
   }
   :host([theme="dark"]) {
     color-scheme: dark;
-    --page: #121213; --text: #f8f8f8; --line: #3a3a3c; --covered: #3a3a3c; --green: #538d4e;
+    --page: #121213; --text: #f8f8f8; --line: #3a3a3c; --covered: #3a3a3c; --typed: #565758; --green: #538d4e;
     --button: #2a2a2c; --quiet: #a0a3a7; --link: #8ab4f8; --shadow: rgb(0 0 0 / 60%);
   }
   /* all: initial outranks the browser's own [hidden] rule, so say it again. */
   :host([hidden]) { display: none; }
   .panel {
-    position: fixed; top: 64px; right: 16px; z-index: 2147483647; width: 260px;
+    position: fixed; top: 64px; right: ${MARGIN}px; z-index: 2147483647; width: ${WIDTH}px;
     padding: 12px 14px; border-radius: 12px; background: var(--page); color: var(--text);
     border: 1px solid var(--line); box-shadow: 0 4px 20px var(--shadow);
     font: 14px/1.4 system-ui, sans-serif;
@@ -61,9 +67,12 @@ const STYLE = `
   .box {
     width: 36px; height: 36px; display: grid; place-items: center; border-radius: 4px;
     font-size: 20px; font-weight: 700; text-transform: uppercase;
+    box-sizing: border-box; border: 2px solid transparent;
     background: var(--covered); color: #ffffff;
   }
-  .box.shown { background: var(--green); }
+  /* A revealed letter looks like a typed one in Wordle: not known yet. */
+  .box.shown { background: none; border-color: var(--typed); color: var(--text); }
+  .box.green { background: var(--green); border-color: transparent; color: #ffffff; }
   .actions { display: flex; gap: 6px; }
   .actions button {
     flex: 1; padding: 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--button);
@@ -134,7 +143,8 @@ export function createPanel(document: Document, options: PanelOptions = {}): Pan
   }
 
   // Draws the shroud and its two buttons; the buttons draw it again revealed.
-  function drawHint(current: Shroud): void {
+  // The boxes a new hint starts with are the known greens, and stay green.
+  function drawHint(current: Shroud, greens = current.shown): void {
     const covered = current.shown.filter((isShown) => !isShown).length;
     const boxes = element(document, 'div', '', 'boxes');
     boxes.setAttribute('role', 'img');
@@ -144,31 +154,33 @@ export function createPanel(document: Document, options: PanelOptions = {}): Pan
     );
     current.shown.forEach((isShown, i) => {
       boxes.append(
-        element(document, 'span', isShown ? current.word[i] : '', isShown ? 'box shown' : 'box'),
+        element(
+          document,
+          'span',
+          isShown ? current.word[i] : '',
+          greens[i] ? 'box shown green' : isShown ? 'box shown' : 'box',
+        ),
       );
     });
     const all = element(document, 'button', 'Reveal the hint');
     const one = element(document, 'button', 'Reveal a letter');
     all.disabled = one.disabled = covered === 0;
-    all.addEventListener('click', () => drawHint(revealAll(current)));
-    one.addEventListener('click', () => drawHint(revealLetter(current, random)));
+    all.addEventListener('click', () => drawHint(revealAll(current), greens));
+    one.addEventListener('click', () => drawHint(revealLetter(current, random), greens));
     const actions = element(document, 'div', '', 'actions');
     actions.append(all, one);
     body.replaceChildren(boxes, actions);
   }
 
-  function drawProblem(heading: string, reason: string): void {
+  function drawProblem(heading: string, reason: string, ask = 'Please '): void {
     const link = element(document, 'a', 'report it on GitHub');
     link.href = REPORT_URL;
     link.target = '_blank';
     link.rel = 'noopener noreferrer';
-    const ask = element(document, 'p', 'Please ');
-    ask.append(link, '.');
-    body.replaceChildren(
-      element(document, 'p', heading),
-      ask,
-      element(document, 'p', reason, 'reason'),
-    );
+    const request = element(document, 'p', ask);
+    request.append(link, '.');
+    const why = reason ? [element(document, 'p', reason, 'reason')] : [];
+    body.replaceChildren(element(document, 'p', heading), request, ...why);
   }
 
   function draw(view: PanelView): void {
@@ -177,6 +189,8 @@ export function createPanel(document: Document, options: PanelOptions = {}): Pan
       body.replaceChildren(element(document, 'p', "we don't know what the word is :C"));
     } else if (view.kind === 'over')
       body.replaceChildren(element(document, 'p', 'This game is over.'));
+    else if (view.kind === 'no-board')
+      drawProblem('No board on the page yet.', '', 'If the board is showing, please ');
     else if (view.kind === 'problem') drawProblem("nudge can't read the board.", view.reason);
     else drawProblem('nudge ran into a problem.', view.message);
   }
